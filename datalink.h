@@ -1,5 +1,5 @@
 #ifndef DATALINK
-#define TOOLS
+#define DATALINK
 #include "ApplicationLayer.h"
 
 char* connectionStateMachine(int fd);
