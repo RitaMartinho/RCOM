@@ -34,8 +34,12 @@
 #define AP_END 0x03 //0000 0011
 
 #define MaxTries 3
-#define TIMEOUT 3
 #define T_PROP 3
+ 
+extern int timeout;
+extern int n_timeout;
+
+
 
 
 typedef struct {
