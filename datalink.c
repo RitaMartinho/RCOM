@@ -12,6 +12,8 @@
 #include "datalink.h"
 #include "alarme.h"
 
+int ns=0;
+int nr=0;
 
 int llopen(int fd, ConnectionMode mode){
 
@@ -244,9 +246,65 @@ int llclose(int fd, ConnectionMode mode){
   return 0;
 }
 
-int llwrite(int fd){
+int llwrite(int fd, unsigned char* buffer,int length ){
+  
+  int transfering=1, res=0, frame_size=0, res1=0, done=1;
+  unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
+  unsigned char RR[5], REJ[5];
+  
+  if(ns==0){
+    buildConnectionFrame(RR,A_S,C_RR0);
+    buildConnectionFrame(REJ,A_S,C_REJ0);
+  }
+  else if (ns==1){
+    buildConnectionFrame(RR,A_S,C_RR1);
+    buildConnectionFrame(REJ,A_S,C_REJ1);
+  }
+  //construimos RR e REJ
 
-  return 1;
+	frame_size= buildFrame(frame_to_send, ns, buffer, length);
+
+  while (transfering)
+  { 
+    //TIMEOUT CAUSION
+    res = write(fd, frame_to_send, frame_size);
+    setAlarm(3);
+    done=1;
+    while( readFromPort(fd, frame_to_receive) ) {
+      if(timeout){
+        n_timeout++;
+        if(n_timeout >=MaxTries){
+          stopAlarm();        
+          printf("Nothing receveid for 3 times\n");
+          return -1;
+        }
+      	else{
+          printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was receveid after 3 seconds\n");
+          printf("Gonna try again!\n\n\n"); 
+          timeout=0;
+          done=0;
+          break;
+        }
+      }
+    }
+    stopAlarm(); //something has been receveid by this point
+  
+    //if(res1==-1) printf("llwrite(): Couldn't read from port\n");
+    
+    if( memcmp(RR,frame_to_receive, 5) ){ //CHECK TO SEE IF RR
+    	if(nr != ns )
+      	ns=nr;
+      	transfering=0;
+    	/* else{
+        	WHAT SHOULD WE DO IN THIS CASE MR.M?
+      }*/
+    }
+    if(memcmp(REJ, frame_to_receive, 5) ){ //REJ CASE
+      stopAlarm();
+      done=0; //try again
+    }
+  }
+  return res;
 }
 
 char* connectionStateMachine(int fd){

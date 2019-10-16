@@ -12,7 +12,6 @@
 #include "datalink.h"
 
 
-
 int main(int argc, char** argv){
 
     int fd=0, res;
@@ -60,3 +59,5 @@ int main(int argc, char** argv){
 
   return 0;
 }
+
+int sender(int fd, )

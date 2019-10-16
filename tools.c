@@ -94,7 +94,7 @@ void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char
 } //supervisionFrame()
 
 
-void buildFrame( char * frame, int C_ns, char* message, int lenght){ //belongs to DATALINK
+void buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght){ //belongs to DATALINK
 
 	
 	frame[0]=FLAG;
@@ -115,9 +115,9 @@ void buildFrame( char * frame, int C_ns, char* message, int lenght){ //belongs t
 }
 
 
-char buildBBC2(char *message, int lenght){ //belongs to datalink
+unsigned char buildBBC2(unsigned char *message, int lenght){ //belongs to datalink
 
-	char BCC2=0;
+	unsigned char BCC2=0;
 
 	for(int i=0; i< lenght; i++){
 
@@ -134,10 +134,10 @@ int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, in
 	package[0]= AP_DATA; //C
 	package[1]=(char)(*seq_n)++;
 
-	if((*seq_n)== 256){ //module 255
+	if((*seq_n)== 256){ //module 255 - GONÇALO
 		*seq_n=0;
 	}
-
+	 
 	aux= size %256; //
 	package[2]=(size- aux)/256;
 	package[3]=aux;
@@ -240,7 +240,7 @@ int readFromPort(int fd, unsigned char* frame){
     unsigned char tmp;
     int done=0, res=0, l=0;
 
-    memset(frame, 0, 100000);
+    memset(frame, 0, SIZE_FRAME);
 
     while(!done){
 
@@ -248,6 +248,10 @@ int readFromPort(int fd, unsigned char* frame){
             perror("read() from port:");
             return -1;
         }
+		else if(res==0){
+			 perror("read() from port:");
+			 return 0;
+		}
 
         if(tmp== FLAG){ // evaluate if end or start point
 
@@ -258,7 +262,7 @@ int readFromPort(int fd, unsigned char* frame){
             else{ // somewhere else in the middle, starts again
 
                 if(frame[l-1] == FLAG){
-                    memset(frame, 0, 100000);
+                    memset(frame, 0, SIZE_FRAME);
                     l=0;
                     frame[l++]=FLAG;
                 }
