@@ -15,10 +15,8 @@
 
 int main(int argc, char** argv){
 
-    int fd=0,c, res;
-    struct termios oldtio,newtio;
-    char buf[255];
-    int sum = 0, speed = 0;
+    int fd=0, res;
+    struct termios oldtio;
     
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
@@ -50,7 +48,7 @@ int main(int argc, char** argv){
   }
   
   if((res=llclose(fd, mode))==-1){
-    printf("llopen not working \n");
+    printf("llclose not working \n");
   }
 
 

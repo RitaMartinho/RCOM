@@ -10,26 +10,13 @@
 #include "ApplicationLayer.h"
 #include "tools.h"
 #include "datalink.h"
-
-
-int timeout_flag = 0;
-int count=0;
-
-
-void timeout(){
-  printf("Time-out # %d\n", count+1);
-	count++;
-  if(count >= MaxTries){
-    timeout_flag=1;
-  }
-}
+#include "alarme.h"
 
 
 int llopen(int fd, ConnectionMode mode){
 
-  int connected = 0, tries=0, state=0, res=0, failed=0;
+  int connected = 0, state=0, res=0, n_timeout=0;
   char SET[5], UA[5];
-  int receivedSM=0;
   char * frame;
 
   //Building frames
@@ -37,8 +24,6 @@ int llopen(int fd, ConnectionMode mode){
   buildConnectionFrame(UA,A_S,C_UA);
 
   switch (mode){
-  
-    
     case SEND:
        
        printf("ENTERING SENDER!\n");
@@ -47,50 +32,49 @@ int llopen(int fd, ConnectionMode mode){
           switch(state){ // like a state machine to know if it is sending SET or waiting for UA
             
             case 0: //SENDS SET
-                  tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending SET
+              tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending SET
 
-                  if((res = write(fd,SET,5)) <5){
-                    perror("write():");
-                    return -1;
-                  }
-                  else printf("SET SENT\n");
+              if((res = write(fd,SET,5)) <5){
+                perror("write():");
+                return -1;
+              }
+              else printf("SET SENT\n");
 
-                  state =1;
-                  break;
+              state =1;
+              break;
+
             case 1: // GETTING UA
 
+              printf("WAITING FOR UA\n");
+              setAlarm(3);
+              frame = NULL;
+              while(frame == NULL){
+                frame= connectionStateMachine(fd);
 
-                  printf("WAITING FOR UA\n");
-                  //(void) signal(SIGALRM, timeout);
-                  frame= connectionStateMachine(fd);
-
-                  if( receivedSM == TIMEOUT){
-                    
-                    if(failed < MaxTries){
-
-                      printf("WAITING FOR UA: Nothing was receveid after 3 seconds");
-                      failed++;
-                      state=0; //tries to send again
-                    }
-                    else{ // number of tries exceed
-                        printf("Nothing receveid for 3 times");
-                        return -1;
-                    }
+                if(timeout){  
+                  n_timeout++;
+                  if(n_timeout >= MaxTries){
+                    stopAlarm();
+                    printf("Nothing receveid for 3 times\n");
+                    return -1;
                   }
-                  else{
-                
-                    if(UA[2]==frame[2] ){
+                  else{ 
+                    printf("WAITING FOR UA: Nothing was receveid after 3 seconds\n");
+                    printf("Gonna try again!\n\n\n");
+                    state=0; //tries to send again
+                    timeout=0;
+                    break;
+                  }
+                }
+              }                  
+              stopAlarm(); // something has been receveid by this point
 
-                      printf("Connection established!\n");
-                      connected=1;
-                    }
-                    else state=0;
-
-                    }
-                    
-                  break;
-            default:
-                  break;
+              if( frame != NULL && UA[2]==frame[2] ){
+                printf("Connection established!\n");
+                connected=1;
+              }
+              else state=0;
+              break;
           }
     }
     break;
@@ -108,7 +92,7 @@ int llopen(int fd, ConnectionMode mode){
                   printf("WAITING FOR SET\n");
                   frame= connectionStateMachine(fd);
 
-                    if(SET[2]==frame[2]){
+                    if(frame!= NULL && SET[2]==frame[2]){
                       state=1;
                     }
                   break;
@@ -135,20 +119,18 @@ int llopen(int fd, ConnectionMode mode){
 
 int llclose(int fd, ConnectionMode mode){
 
-  int connected = 0, tries=0, state=0, res=0, failed=0;
+  int connected = 0, state=0, res=0, n_timeout=0;
   char DISC[5], UA[5];
-  int receivedSM;
   char * frame;
 
   //Building frames
   buildConnectionFrame(UA,A_S,C_UA);
   buildConnectionFrame(DISC, A_S, C_DISC);
 
+  conta=1;
   switch (mode){
   
-    
     case SEND:
-       
        printf("ENTERING SENDER!\n");
         while(connected==0){
 
@@ -167,31 +149,37 @@ int llclose(int fd, ConnectionMode mode){
                   break;
             case 1: // GETTING DISC
 
+              printf("WAITING FOR DISC\n");
+              setAlarm(3);
+              frame = NULL;
+              while (frame == NULL){                   
+                frame = connectionStateMachine(fd);
 
-                  printf("WAITING FOR DISC\n");
-                  //(void) signal(SIGALRM, timeout);
-                  frame= connectionStateMachine(fd);
-
-                  if( receivedSM == TIMEOUT){
-                    
-                    if(failed < MaxTries){
-
-                      printf("WAITING FOR UA: Nothing was receveid after 3 seconds");
-                      failed++;
-                      state=0; //tries to send again
-                    }
-                    else{ // number of tries exceed
-                        printf("Nothing receveid for 3 times");
-                        return -1;
-                    }
+                if( timeout ){
+                  n_timeout++; 
+                  if(n_timeout >= MaxTries){
+                    stopAlarm();
+                    printf("Nothing receveid for 3 times\n");
+                    return -1;
                   }
-                  
-                
-                  else if(DISC[2]==frame[2] ){
-                        state=2;
-                    }
-                    
-                  break;
+                  else{ 
+                    printf("WAITING FOR DISC: Nothing was receveid for 3 seconds\n");
+                    printf("Gonna try again!\n\n\n");
+                    state=0;
+                    timeout=0;
+                    break;
+                  }
+                }
+              }
+              stopAlarm();
+              
+              if(frame!= NULL && DISC[2]==frame[2] ){
+                  printf("Connection terminated!\n");  
+                  state=2;
+              }
+              else state=0;
+              break;
+
             case 2:
                   tcflush(fd, TCIOFLUSH);  //clear port
 					        // fprintf(stderr, "\nSending UA\n");
@@ -202,9 +190,6 @@ int llclose(int fd, ConnectionMode mode){
 					        printf("\nConnection terminated.\n");
 					        connected = 1;
 					        break;
-
-            default:
-                  break;
           }
     }
     break;
@@ -261,25 +246,24 @@ int llclose(int fd, ConnectionMode mode){
 
 int llwrite(int fd){
 
-
+  return 1;
 }
-
-
 
 char* connectionStateMachine(int fd){
 
   connectionState currentState = START_CONNECTION;
   char c;
   static char message[5];
-  int done = 0, i = 0, res=0;
-  
+  int done = 0, i = 0;  
 
   while (!done){
 
     if (currentState == STOP_CON){
       done = 1;
     }
-    else read(fd, &c, 1);
+    else if (read(fd, &c, 1)== 0){
+      return NULL;
+    }
     
     switch(currentState){
 
@@ -354,6 +338,9 @@ char* connectionStateMachine(int fd){
       }
   }
   return message;
-
 }
 
+int stuffing(char *buffer, int buff_size){
+  
+  return 1;
+}
