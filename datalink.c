@@ -307,6 +307,63 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   return res;
 }
 
+
+int llread(int fd, unsigned char* frame_to_AL ){
+
+  int done=0, state=0, res=0;
+  unsigned char frame_from_port[SIZE_FRAME];
+ 
+  //DISC
+
+  while(!done){
+
+    switch(state){
+
+          case 0://reads from port
+
+              res=readFromPort(fd,frame_from_port);
+              //timeout
+
+              state=1;
+              break;
+
+          case 1: // 
+
+              if(frame_from_port[2]== C_NS0 && (nr==0)){
+
+
+              }
+              else if(frame_from_port[2] == C_NS1 && (nr==1)){
+
+
+              }
+
+              break;
+
+          case 2: //check BCC1
+              
+              if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
+
+                state=state REJ;
+
+              }
+              else state =3;
+              break;
+          case 3:
+
+              //DESTUFFING
+              state=4;
+              break;
+          case 4:
+
+              //
+    }
+
+
+  }
+}
+
+
 char* connectionStateMachine(int fd){
 
   connectionState currentState = START_CONNECTION;
