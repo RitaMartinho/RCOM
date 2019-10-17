@@ -398,7 +398,3 @@ char* connectionStateMachine(int fd){
   return message;
 }
 
-int stuffing(char *buffer, int buff_size){
-  
-  return 1;
-}

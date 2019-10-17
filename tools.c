@@ -94,28 +94,31 @@ void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char
 } //supervisionFrame()
 
 
-void buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght){ //belongs to DATALINK
+int buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght){ //belongs to DATALINK
 
-	
-	frame[0]=FLAG;
-	frame[1]=A_S;
+	int l=0;
+	unsigned char BCC2;
+	BCC2=buildBCC2(message, lenght);
+
+	frame[l++]=FLAG;
+	frame[l++]=A_S;
 	
 	if(C_ns){
-		frame[2]= C_NS1;
+		frame[l++]= C_NS1;
 	}
-	else frame[2]=C_NS0;
+	else frame[l++]=C_NS0;
 
-	frame[3]= frame[1]^frame[2]; // BBC1
+	frame[l++]= frame[1]^frame[2]; // BBC1
 
-	//stuffing
+	l=stuffing(lenght,message, frame, l, BCC2);
 
-	frame[4+lenght]=buildBBC2(message, lenght);
+	frame[l]=FLAG;
 
-	frame[5+lenght]=FLAG;
+	return l+1; //returns lenght of frame (counts the 0 position)
 }
 
 
-unsigned char buildBBC2(unsigned char *message, int lenght){ //belongs to datalink
+unsigned char buildBCC2(unsigned char *message, int lenght){ //belongs to datalink
 
 	unsigned char BCC2=0;
 
@@ -282,4 +285,41 @@ int readFromPort(int fd, unsigned char* frame){
     }
      
     return l;
+}
+
+
+int stuffing (int length, unsigned char* buffer, unsigned char* frame, int l, unsigned char BCC2){
+
+	for(int i=0; i<length; i++){
+
+		if(buffer[i]== FLAG){//a flag is in the middle of the data
+
+			frame[l++]=ESC;
+			frame[l++]=FLAG_PPP;
+		}
+		else if(buffer[i]==ESC){
+
+			frame[l++]=ESC;
+			frame[l++]=ESC_PPP;
+
+		}
+		else frame[l++]= buffer[i];
+
+	}
+
+	if(BCC2==FLAG){
+
+		frame[l++]=ESC;
+		frame[l++]=FLAG_PPP;
+	}
+	else if(BCC2==ESC){
+
+		frame[l++]= ESC;
+		frame[l++]=ESC_PPP;
+	}
+	else frame[l++]=BCC2;
+
+
+	return l;
+
 }
