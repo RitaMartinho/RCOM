@@ -83,7 +83,7 @@ int resetPort(int fd, struct termios *oldtio) {
 } 
 
 
-void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char C){ // belongs to DATALINK
+void buildConnectionFrame( unsigned char *connectionFrame, unsigned char A, unsigned char C){ // belongs to DATALINK
 
 	connectionFrame[0] = FLAG;
 	connectionFrame[1] = A;
@@ -247,12 +247,14 @@ int readFromPort(int fd, unsigned char* frame){
 
     while(!done){
 
-        if((res=read(fd, &tmp,1))<0){
-            perror("read() from port:");
+		res=read(fd, &tmp,1);
+
+        if(res==-1){
+            perror("read() from port = -1");
             return -1;
         }
 		else if(res==0){
-			 perror("read() from port:");
+			 perror("read() from por =0");
 			 return 0;
 		}
 

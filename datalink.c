@@ -122,7 +122,7 @@ int llopen(int fd, ConnectionMode mode){
 int llclose(int fd, ConnectionMode mode){
 
   int connected = 0, state=0, res=0, n_timeout=0;
-  char DISC[5], UA[5];
+  unsigned char DISC[5], UA[5];
   char * frame;
 
   //Building frames
@@ -268,6 +268,8 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   { 
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
+
+    printf("WROTE TO PORT\n");
     setAlarm(3);
     done=1;
     while( readFromPort(fd, frame_to_receive) ) {
@@ -312,7 +314,19 @@ int llread(int fd, unsigned char* frame_to_AL ){
 
   int done=0, state=0, res=0;
   unsigned char frame_from_port[SIZE_FRAME];
- 
+  unsigned char RR[5], REJ[5];
+  unsigned char BCC2 = 0x00;
+  unsigned char BCC2aux = 0x00;
+  //build RR and REJ
+  /*if(nr==1){
+
+    buildConnectionFrame(RR,A_S,C_RR1);
+    buildConnectionFrame(REJ,A_S, C_REJ1);
+  }else if(nr==0){
+
+    buildConnectionFrame(RR, A_S,C_RR0);
+    buildConnectionFrame(REJ,A_S,C_RR1);
+  }*/
   //DISC
 
   while(!done){
@@ -322,18 +336,22 @@ int llread(int fd, unsigned char* frame_to_AL ){
           case 0://reads from port
 
               res=readFromPort(fd,frame_from_port);
-              //timeout
-
-              state=1;
+        
+        			if(res==-1 || res== 0){
+                
+                return -1;
+              }
+        
+              state=2;
               break;
 
-          case 1: // 
+          case 1: // IS THIS CASE POSSIBLE?
 
-              if(frame_from_port[2]== C_NS0 && (nr==0)){
+              if(frame_from_port[2]== C_NS0 && (nr==1)){
 
 
               }
-              else if(frame_from_port[2] == C_NS1 && (nr==1)){
+              else if(frame_from_port[2] == C_NS1 && (nr==0)){
 
 
               }
@@ -344,26 +362,102 @@ int llread(int fd, unsigned char* frame_to_AL ){
               
               if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
 
-                state=state REJ;
-
+                state=6;
               }
               else state =3;
               break;
-          case 3:
 
-              //DESTUFFING
+          case 3://DESTUFFING
+
+              for (int i = 4; i < res - 1; i++) {
+              if((frame_from_port[i] == ESC) && ((frame_from_port[i+1] == FLAG_PPP) || (frame_from_port[i+1] == ESC_PPP))) {
+                if(frame_from_port[i+1] == FLAG_PPP) {
+                  frame_from_port[i] = FLAG;
+                } else if(frame_from_port[i+1] == ESC_PPP) {
+                  frame_from_port[i] = ESC;
+                }
+                for (int j = i + 1; j < res - 1; j++){
+                  frame_from_port[j] = frame_from_port[j+1];
+                }
+                res--;
+              }
+            }
+              
               state=4;
               break;
-          case 4:
+          case 4:  //check BCC2
 
-              //
+              BCC2= frame_from_port[4];
+
+              for(int i=5; i< res-2; i++){
+
+                BCC2aux= BCC2aux ^frame_from_port[i];
+              }
+
+              if(BCC2 != BCC2aux){
+
+                state=6;
+              }
+
+							else state=5;
+        
+              break;
+          case 5: 
+
+              if(frame_from_port[2]== C_NS0 && nr==0){
+
+                nr=1; // update nr
+                buildConnectionFrame(RR,A_S,C_RR1);
+              }
+              else if(frame_from_port[2]== C_NS1 && nr==1){
+
+                nr=0;// update nr
+                buildConnectionFrame(RR, A_S,C_RR0);
+              }
+
+
+              //stuff well read, then send it to AppLayer
+
+              //sends RR
+
+              tcflush(fd,TCIOFLUSH);
+
+              if( write(fd, RR, 5) < 5){
+                
+                perror(" Write() RR:");
+                return -1;
+              }
+
+              done=1;
+              break;
+      	case 6: //REJ case
+        		
+        		if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
+              
+              buildConnectionFrame(REJ, A_S,C_REJ0); 
+            }
+        		else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
+              
+               buildConnectionFrame(REJ, A_S,C_REJ1);
+            }
+        
+        		tcflush(fd, TCIOFLUSH);
+        		
+        		if( write( fd, REJ, 5)< 5){
+              
+              perror("Write () REJ:");
+              return -1;
+            }
+        		state=0; // trying again 
+        		break;
+        		
+
     }
 
 
   }
+  return res-6;
 }
-
-
 char* connectionStateMachine(int fd){
 
   connectionState currentState = START_CONNECTION;
