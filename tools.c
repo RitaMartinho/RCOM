@@ -67,7 +67,6 @@ int setPort(char *port, struct termios *oldtio){
 
 }
 
-
 //returns -1 in error
 int resetPort(int fd, struct termios *oldtio) {
 
@@ -173,7 +172,6 @@ void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data){
 
 }
 
-
 int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage *tlv){
 
 
@@ -236,7 +234,6 @@ int fileLenght(int fd){
 	return lenght;
 }
 
-
 //returns lenght of frame read from port, -1 in error 
 int readFromPort(int fd, unsigned char* frame){
 
@@ -289,39 +286,47 @@ int readFromPort(int fd, unsigned char* frame){
     return l;
 }
 
-
-int stuffing (int length, unsigned char* buffer, unsigned char* frame, int l, unsigned char BCC2){
+int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2){
 
 	for(int i=0; i<length; i++){
-
 		if(buffer[i]== FLAG){//a flag is in the middle of the data
 
-			frame[l++]=ESC;
-			frame[l++]=FLAG_PPP;
+			frame[frame_length++]=ESC;
+			frame[frame_length++]=FLAG_PPP;			
 		}
 		else if(buffer[i]==ESC){
 
-			frame[l++]=ESC;
-			frame[l++]=ESC_PPP;
-
+			frame[frame_length++]=ESC;
+			frame[frame_length++]=ESC_PPP;
 		}
-		else frame[l++]= buffer[i];
-
+		else frame[frame_length++]= buffer[i];
 	}
 
 	if(BCC2==FLAG){
-
-		frame[l++]=ESC;
-		frame[l++]=FLAG_PPP;
+		frame[frame_length++]=ESC;
+		frame[frame_length++]=FLAG_PPP;
 	}
 	else if(BCC2==ESC){
-
-		frame[l++]= ESC;
-		frame[l++]=ESC_PPP;
+		frame[frame_length++]= ESC;
+		frame[frame_length++]=ESC_PPP;
 	}
-	else frame[l++]=BCC2;
+	else frame[frame_length++]=BCC2;
+	return frame_length;
+}
 
+//HERE BUFFER = PRE-DESTUFFING AND FRAME = AFTER-DESTUFFING
+int destuffing(int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2){
 
-	return l;
-
+	for(int i = 0; i< length; i++){
+		if( buffer[i] == ESC) { //remove the next one
+			if(buffer[i+1] == FLAG_PPP){
+				frame[frame_length++] = FLAG;
+			}
+			else if(buffer[i+1] == ESC_PPP){ //remove the next one
+				frame[frame_length++] == ESC;
+			}
+		}
+		else frame[frame_length]=buffer[i];
+	}
+	return frame_length;
 }
