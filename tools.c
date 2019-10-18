@@ -67,7 +67,6 @@ int setPort(char *port, struct termios *oldtio){
 
 }
 
-
 //returns -1 in error
 int resetPort(int fd, struct termios *oldtio) {
 
@@ -82,7 +81,6 @@ int resetPort(int fd, struct termios *oldtio) {
 
 } 
 
-
 void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char C){ // belongs to DATALINK
 
 	connectionFrame[0] = FLAG;
@@ -93,8 +91,7 @@ void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char
 
 } //supervisionFrame()
 
-
-void buildFrame( char * frame, int C_ns, char* message, int lenght){ //belongs to DATALINK
+void buildFrame( char * frame, int C_ns, unsigned char* message, int lenght){ //belongs to DATALINK
 
 	
 	frame[0]=FLAG;
@@ -114,8 +111,7 @@ void buildFrame( char * frame, int C_ns, char* message, int lenght){ //belongs t
 	frame[5+lenght]=FLAG;
 }
 
-
-char buildBBC2(char *message, int lenght){ //belongs to datalink
+char buildBBC2(unsigned char *message, int lenght){ //belongs to datalink
 
 	char BCC2=0;
 
@@ -169,7 +165,6 @@ void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data){
 	}
 
 }
-
 
 int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage *tlv){
 
@@ -233,7 +228,6 @@ int fileLenght(int fd){
 	return lenght;
 }
 
-
 //returns lenght of frame read from port, -1 in error 
 int readFromPort(int fd, unsigned char* frame){
 
@@ -278,4 +272,49 @@ int readFromPort(int fd, unsigned char* frame){
     }
      
     return l;
+}
+
+int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2){
+
+	for(int i=0; i<length; i++){
+		if(buffer[i]== FLAG){//a flag is in the middle of the data
+
+			frame[frame_length++]=ESC;
+			frame[frame_length++]=FLAG_PPP;			
+		}
+		else if(buffer[i]==ESC){
+
+			frame[frame_length++]=ESC;
+			frame[frame_length++]=ESC_PPP;
+		}
+		else frame[frame_length++]= buffer[i];
+	}
+
+	if(BCC2==FLAG){
+		frame[frame_length++]=ESC;
+		frame[frame_length++]=FLAG_PPP;
+	}
+	else if(BCC2==ESC){
+		frame[frame_length++]= ESC;
+		frame[frame_length++]=ESC_PPP;
+	}
+	else frame[frame_length++]=BCC2;
+	return frame_length;
+}
+
+//HERE BUFFER = PRE-DESTUFFING AND FRAME = AFTER-DESTUFFING
+int destuffing(int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2){
+
+	for(int i = 0; i< length; i++){
+		if( buffer[i] == ESC) { //remove the next one
+			if(buffer[i+1] == FLAG_PPP){
+				frame[frame_length++] = FLAG;
+			}
+			else if(buffer[i+1] == ESC_PPP){ //remove the next one
+				frame[frame_length++] == ESC;
+			}
+		}
+		else frame[frame_length]=buffer[i];
+	}
+	return frame_length;
 }
