@@ -12,11 +12,19 @@
 #include "datalink.h"
 
 
-
 int main(int argc, char** argv){
 
-    int fd=0, res;
+    int fd=0, res=0, size=0;
     struct termios oldtio;
+    unsigned char test[]="ola";   
+    unsigned char package[SIZE_DATAPACKAGE];
+    unsigned char  package2[SIZE_DATAPACKAGE];
+    int seq_n=0;
+    
+
+    size= buildDataPackage(test,package,3, &seq_n);
+
+    printf("size of package: %d\n", size);
     
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
@@ -46,6 +54,28 @@ int main(int argc, char** argv){
   if((res=llopen(fd, mode))==-1){
     printf("llopen not working \n");
   }
+
+
+
+  if(mode==0){
+     res=llwrite(fd,package,size);
+
+     if(res==-1) printf("llwrite didn't work\n");
+  }
+
+  if(mode==1){
+      res= llread(fd,package2);
+
+    if(res==-1) printf("llread didn't work\n");
+    
+      for(int i=4; i<size; i++){
+
+        printf("%c\n", package2[i]);
+      }
+
+  }
+ 
+
   
   if((res=llclose(fd, mode))==-1){
     printf("llclose not working \n");
@@ -60,3 +90,5 @@ int main(int argc, char** argv){
 
   return 0;
 }
+
+//int sender(int fd, );

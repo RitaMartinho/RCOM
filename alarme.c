@@ -22,7 +22,7 @@ void stopAlarm() {
 	sigemptyset(&action.sa_mask);
    action.sa_flags=0;
 
-	sigaction(SIGALRM, &action, NULL);
+    sigaction(SIGALRM, &action, NULL);
    printf("Stoped SIGALRM.\n");
    timeout=FALSE;
    n_timeout=0;

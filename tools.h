@@ -65,8 +65,9 @@ typedef enum {
 int setPort(char *port, struct termios *oldtio);
 int resetPort(int fd, struct termios *oldtio);
 
-void buildConnectionFrame( char *connectionFrame, unsigned char A, unsigned char C);
-char buildBBC2(char *message, int lenght);
+void buildConnectionFrame( unsigned char *connectionFrame, unsigned char A, unsigned char C);
+int buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght);
+unsigned char buildBCC2(unsigned char *message, int lenght);
 
 int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int * seq_n);
 void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data);
@@ -78,5 +79,7 @@ int fileLenght(int fd);
 int readFromPort(int fd, unsigned char* frame);
 
 
+int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2);
+int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2);
 
 #endif
