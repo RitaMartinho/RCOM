@@ -303,11 +303,9 @@ int llread(int fd, unsigned char* frame_to_AL ){
   /*
     //build RR and REJ
     if(nr==1){
-
       buildConnectionFrame(RR,A_S,C_RR1);
       buildConnectionFrame(REJ,A_S, C_REJ1);
     }else if(nr==0){
-
       buildConnectionFrame(RR, A_S,C_RR0);
       buildConnectionFrame(REJ,A_S,C_RR1);
     }
@@ -346,16 +344,31 @@ int llread(int fd, unsigned char* frame_to_AL ){
         if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
 
           state=6;
+          break;
         }
         else state =3;
         break;
 
       case 3://DESTUFFING
-        destuffing(res-2, frame_from_port, data_frame_destuffed, destuffed_data_size); 
+        destuffed_data_size= destuffing(res-2, frame_from_port, data_frame_destuffed); 
         state=4;
         break;
       case 4:  //check BCC2
-        state=5;
+
+        BCC2=frame_from_port[res-2];
+
+        BCC2aux=data_frame_destuffed[0];
+
+        for(int k=1; k<destuffed_data_size; k++){
+
+          BCC2aux= BCC2aux ^ data_frame_destuffed[k];
+        }
+
+        if(BCC2!=BCC2aux){
+          state=6;
+          break;
+        }
+        else state=5;
         break;
       case 5: 
 
@@ -498,4 +511,3 @@ char* connectionStateMachine(int fd){
   }
   return message;
 }
-

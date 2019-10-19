@@ -310,8 +310,9 @@ int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame
 }
 
 //HERE BUFFER = PRE-DESTUFFING AND FRAME = AFTER-DESTUFFING
-int destuffing(int length, unsigned char* buffer, unsigned char* frame, int frame_length){
+int destuffing(int length, unsigned char* buffer, unsigned char* frame){
 
+	int frame_length=0;
 	for(int i = 4; i< length; i++){
 		if( buffer[i] == ESC) { //remove the next one
 			if(buffer[i+1] == FLAG_PPP){
