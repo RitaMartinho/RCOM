@@ -11,18 +11,19 @@
 #include "tools.h"
 #include "datalink.h"
 
+ApplicationLayer Al;
 
 int main(int argc, char** argv){
 
     int fd=0, res=0, size=0;
     struct termios oldtio;
-    unsigned char test[]="ola";   
+    unsigned char test[]="ol~a";   
     unsigned char package[SIZE_DATAPACKAGE];
     unsigned char  package2[SIZE_DATAPACKAGE];
     int seq_n=0;
     
 
-    size= buildDataPackage(test,package,3, &seq_n);
+    size= buildDataPackage(test,package,4, &seq_n);
 
     printf("size of package: %d\n", size);
     
@@ -48,13 +49,40 @@ int main(int argc, char** argv){
   scanf("%d",&i);
   mode =i-1;
 
-  //printf("MODE: %d\n", mode);
-  //*******************************************
+  switch (mode)
+  {
+    case SEND:
+      printf("What's the name of the file you wanna transfer?\n");
+      break;
+    
+    case RECEIVE:
+      printf("How do you wanna name the incoming file?\n");
+      break;
+  }
+
+  int done = 0;
+  char file[20];
+	while (!done) {
+		printf("\nFILENAME: ");
+
+		if (scanf("%s", file) == 1){
+            done = 1;}
+		else
+			printf("Invalid input. Try again:\n");
+  }
+  
+  (Al.file) = file;
+  int file_fd = open(Al.file, O_RDONLY);
+  (Al.file_size)=fileLenght(file_fd);
+
+  printf("File lenght= %d\n", Al.file_size);
+
 
   if((res=llopen(fd, mode))==-1){
     printf("llopen not working \n");
+    printf("Connection not possible, check cable and try again.\n");
+    return 1;
   }
-
 
 
   if(mode==0){
@@ -66,17 +94,18 @@ int main(int argc, char** argv){
   if(mode==1){
       res= llread(fd,package2);
 
-    if(res==-1) printf("llread didn't work\n");
-    
-      for(int i=4; i<size; i++){
+    if(res==-1){
+      printf("llread didn't work\n");
+      return 1;
+    }
+      for(int i=4; i<10; i++){
 
-        printf("%c\n", package2[i]);
+        printf("%c", package2[i]);
       }
+      printf("\n");
 
   }
  
-
-  
   if((res=llclose(fd, mode))==-1){
     printf("llclose not working \n");
   }

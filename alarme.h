@@ -1,7 +1,7 @@
 
 extern int timeout;
 extern int n_timeout;
-extern int conta;
+extern int timeout_counter;
 void handler();
 
 void setAlarm();

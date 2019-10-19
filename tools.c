@@ -81,7 +81,6 @@ int resetPort(int fd, struct termios *oldtio) {
 
 } 
 
-
 void buildConnectionFrame( unsigned char *connectionFrame, unsigned char A, unsigned char C){ // belongs to DATALINK
 
 	connectionFrame[0] = FLAG;
@@ -115,7 +114,6 @@ int buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int len
 
 	return l+1; //returns lenght of frame (counts the 0 position)
 }
-
 
 unsigned char buildBCC2(unsigned char *message, int lenght){ //belongs to datalink
 
@@ -220,7 +218,7 @@ int fileLenght(int fd){
 
 	int lenght=0;
 
-	if((lenght= lseek(fd,0,SEEK_END)<0)){ // goes 
+	if((lenght= lseek(fd,0,SEEK_END))<0){ // goes 
 
 		perror("lseek():");
 		return -1;
@@ -243,27 +241,25 @@ int readFromPort(int fd, unsigned char* frame){
     memset(frame, 0, SIZE_FRAME);
 
     while(!done){
-
 		res=read(fd, &tmp,1);
-
         if(res==-1){
             perror("read() from port = -1");
             return -1;
         }
 		else if(res==0){
-			 perror("read() from por =0");
-			 return 0;
+			 printf("read() from por =0\n");
+			 //return 0;
 		}
-
-        if(tmp== FLAG){ // evaluate if end or start point
+        else if(tmp== FLAG){ // evaluate if end or start point
 
             if(l==0){ //start point 
+				printf("START FRAME!\n");
                 frame[l++]=tmp;
-
             }
             else{ // somewhere else in the middle, starts again
 
                 if(frame[l-1] == FLAG){
+					printf("WEIRD FLAG POINT\n");
                     memset(frame, 0, SIZE_FRAME);
                     l=0;
                     frame[l++]=FLAG;
@@ -271,18 +267,17 @@ int readFromPort(int fd, unsigned char* frame){
                 else{ // in the end
                     frame[l++]= tmp;
                     done=1;
+					printf("TERMINATING FLAG\n\n");
                 }
             }
         }
         else{
-
             if(l>0){ // put in frame what reads in the middle
                 frame[l++]=tmp;
             }
         }
-
     }
-     
+	printf("Leaving readformPort\n\n");
     return l;
 }
 
@@ -315,9 +310,9 @@ int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame
 }
 
 //HERE BUFFER = PRE-DESTUFFING AND FRAME = AFTER-DESTUFFING
-int destuffing(int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2){
+int destuffing(int length, unsigned char* buffer, unsigned char* frame, int frame_length){
 
-	for(int i = 0; i< length; i++){
+	for(int i = 4; i< length; i++){
 		if( buffer[i] == ESC) { //remove the next one
 			if(buffer[i+1] == FLAG_PPP){
 				frame[frame_length++] = FLAG;
@@ -325,8 +320,9 @@ int destuffing(int length, unsigned char* buffer, unsigned char* frame, int fram
 			else if(buffer[i+1] == ESC_PPP){ //remove the next one
 				frame[frame_length++] == ESC;
 			}
+			i++;
 		}
-		else frame[frame_length]=buffer[i];
+		else frame[frame_length++]=buffer[i];
 	}
 	return frame_length;
 }
