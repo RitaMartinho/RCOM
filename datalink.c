@@ -18,17 +18,15 @@ int nr=0;
 int llopen(int fd, ConnectionMode mode){
 
   int connected = 0, state=0, res=0, n_timeout=0;
-  char SET[5], UA[5];
+  unsigned char SET[5], UA[5];
   char * frame;
 
   //Building frames
   buildConnectionFrame(SET,A_S,C_SET);
   buildConnectionFrame(UA,A_S,C_UA);
-
+  timeout_counter = 1;
   switch (mode){
     case SEND:
-       
-       printf("ENTERING SENDER!\n");
         while(connected==0){
 
           switch(state){ // like a state machine to know if it is sending SET or waiting for UA
@@ -57,11 +55,11 @@ int llopen(int fd, ConnectionMode mode){
                   n_timeout++;
                   if(n_timeout >= MaxTries){
                     stopAlarm();
-                    printf("Nothing receveid for 3 times\n");
+                    printf("Nothing received for 3 times\n");
                     return -1;
                   }
                   else{ 
-                    printf("WAITING FOR UA: Nothing was receveid after 3 seconds\n");
+                    printf("Nothing was received after 3 seconds\n");
                     printf("Gonna try again!\n\n\n");
                     state=0; //tries to send again
                     timeout=0;
@@ -69,7 +67,7 @@ int llopen(int fd, ConnectionMode mode){
                   }
                 }
               }                  
-              stopAlarm(); // something has been receveid by this point
+              stopAlarm(); // something has been received by this point
 
               if( frame != NULL && UA[2]==frame[2] ){
                 printf("Connection established!\n");
@@ -82,38 +80,32 @@ int llopen(int fd, ConnectionMode mode){
     break;
           
   case RECEIVE:
+    while(connected==0){
+      switch(state){ // like a state machine to know if it is sending UA or waiting for SET
+        
+        case 0: //getting SET
 
-          printf("ENTERING RECEIVER!\n");
+              printf("WAITING FOR SET\n");
+              frame= connectionStateMachine(fd);
 
-          while(connected==0){
+                if(frame!= NULL && SET[2]==frame[2]){
+                  state=1;
+                }
+              break;
+              
+        case 1: // sending UA
 
-          switch(state){ // like a state machine to know if it is sending UA or waiting for SET
-            
-            case 0: //getting SET
+              tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
 
-                  printf("WAITING FOR SET\n");
-                  frame= connectionStateMachine(fd);
-
-                    if(frame!= NULL && SET[2]==frame[2]){
-                      state=1;
-                    }
-                  break;
-                  
-            case 1: // sending UA
-
-                  tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
-
-                  if((res = write(fd,UA,5)) <5){
-                    perror("write():");
-                    return -1;
-                  }
-                  printf("Connection Established!\n");
-                  connected=1;
-                  break;
-            default:
-                  break;
-          }
-    }
+              if((res = write(fd,UA,5)) <5){
+                perror("write():");
+                return -1;
+              }
+              printf("Connection Established!\n");
+              connected=1;
+              break;
+        }
+      }
     break;
   }
   return 0;
@@ -129,11 +121,9 @@ int llclose(int fd, ConnectionMode mode){
   buildConnectionFrame(UA,A_S,C_UA);
   buildConnectionFrame(DISC, A_S, C_DISC);
 
-  conta=1;
+  timeout_counter=1;
   switch (mode){
-  
     case SEND:
-       printf("ENTERING SENDER!\n");
         while(connected==0){
 
           switch(state){ // like a state machine to know if it is sending DISC (or UA) or waiting for DISC
@@ -161,11 +151,11 @@ int llclose(int fd, ConnectionMode mode){
                   n_timeout++; 
                   if(n_timeout >= MaxTries){
                     stopAlarm();
-                    printf("Nothing receveid for 3 times\n");
+                    printf("Nothing received for 3 times\n");
                     return -1;
                   }
                   else{ 
-                    printf("WAITING FOR DISC: Nothing was receveid for 3 seconds\n");
+                    printf("WAITING FOR DISC: Nothing was received for 3 seconds\n");
                     printf("Gonna try again!\n\n\n");
                     state=0;
                     timeout=0;
@@ -175,92 +165,86 @@ int llclose(int fd, ConnectionMode mode){
               }
               stopAlarm();
               
-              if(frame!= NULL && DISC[2]==frame[2] ){
-                  printf("Connection terminated!\n");  
+              if(frame!= NULL && DISC[2]==frame[2] ){ //GOT DISC
                   state=2;
               }
               else state=0;
               break;
 
             case 2:
-                  tcflush(fd, TCIOFLUSH);  //clear port
-					        // fprintf(stderr, "\nSending UA\n");
-					        if((res = write(fd, UA, 5)) < 0) {  //0 ou 5?
-					          perror("write()");
-						        return -1;
-					        }
-					        printf("\nConnection terminated.\n");
-					        connected = 1;
-					        break;
+              tcflush(fd, TCIOFLUSH);  //clear port
+              if((res = write(fd, UA, 5)) < 5) {  //0 ou 5?
+                perror("write()");
+                return -1;
+              }
+              printf("\nConnection terminated.\n");
+              connected = 1;
+              break;
           }
-    }
+        }
     break;
           
   case RECEIVE:
+      while(connected==0){
 
-          printf("ENTERING RECEIVER!\n");
+        switch(state){ // like a state machine to know if it is sending DISC
+          
+          case 0: //getting DISC
 
-          while(connected==0){
+            printf("WAITING FOR DISC\n");
+            frame= connectionStateMachine(fd);
 
-          switch(state){ // like a state machine to know if it is sending DISC
-            
-            case 0: //getting DISC
+              if(frame!=NULL && DISC[2]==frame[2]){
+                state=1;
+              }
+            break;
+                
+          case 1: // sending DISC back
 
-                  printf("WAITING FOR DISC\n");
-                  frame= connectionStateMachine(fd);
+            tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
 
-                    if(DISC[2]==frame[2]){
-                      state=1;
-                    }
-                  break;
-                  
-            case 1: // sending DISC back
+            if((res = write(fd,DISC,5)) <5){
+              perror("write():");
+              return -1;
+            }
+            else{
+              state=2;
+            }
+            break;
+          
+          case 2: //waiting for UA
 
-                  tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
+            printf("WAITING FOR UA\n");
+            frame= connectionStateMachine(fd);
 
-                  if((res = write(fd,DISC,5)) <5){
-                    perror("write():");
-                    return -1;
-                  }
-                  else{
-                    state=2;
-                  }
-                  break;
-            
-            case 2: //waiting for UA
-
-                  printf("WAITING FOR UA\n");
-                  frame= connectionStateMachine(fd);
-
-                    if(UA[2]==frame[2]){
-                      printf("\nConnection Terminated!\n");                      
-                      connected=1;
-                    }
-                  break;
-            default:
-                  break;
-          }
-    }
+              if(UA[2]==frame[2]){
+                printf("\nConnection Terminated!\n");                      
+                connected=1;
+              }
+            break;
+        }
+      }
     break;
   }
   return 0;
+  
 }
 
 int llwrite(int fd, unsigned char* buffer,int length ){
   
-  int transfering=1, res=0, frame_size=0, res1=0, done=1;
+  int transfering=1, res=0, frame_size=0, done=1;
   unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
   
+  //BUILD RR and REJ for comparison
   if(ns==0){
-    buildConnectionFrame(RR,A_S,C_RR0);
+    buildConnectionFrame(RR,A_S,C_RR1);
     buildConnectionFrame(REJ,A_S,C_REJ0);
   }
   else if (ns==1){
-    buildConnectionFrame(RR,A_S,C_RR1);
+    buildConnectionFrame(RR,A_S,C_RR0);
     buildConnectionFrame(REJ,A_S,C_REJ1);
   }
-  //construimos RR e REJ
 
 	frame_size= buildFrame(frame_to_send, ns, buffer, length);
 
@@ -268,20 +252,18 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   { 
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
-
-    printf("WROTE TO PORT\n");
     setAlarm(3);
-    done=1;
-    while( readFromPort(fd, frame_to_receive) ) {
+    done = readFromPort(fd, frame_to_receive);
+    while(!done) {
       if(timeout){
         n_timeout++;
         if(n_timeout >=MaxTries){
           stopAlarm();        
-          printf("Nothing receveid for 3 times\n");
+          printf("Nothing received for 3 times\n");
           return -1;
         }
       	else{
-          printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was receveid after 3 seconds\n");
+          printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was received after 3 seconds\n");
           printf("Gonna try again!\n\n\n"); 
           timeout=0;
           done=0;
@@ -289,172 +271,142 @@ int llwrite(int fd, unsigned char* buffer,int length ){
         }
       }
     }
-    stopAlarm(); //something has been receveid by this point
-  
-    //if(res1==-1) printf("llwrite(): Couldn't read from port\n");
+    stopAlarm(); //something has been received by this point
     
-    if( memcmp(RR,frame_to_receive, 5) ){ //CHECK TO SEE IF RR
-    	if(nr != ns )
-      	ns=nr;
-      	transfering=0;
-    	/* else{
-        	WHAT SHOULD WE DO IN THIS CASE MR.M?
-      }*/
+    if( memcmp(RR,frame_to_receive, 5) == 0 ){ //CHECK TO SEE IF RR
+    	/*
+        if(nr != ns ){
+          ns=nr;
+          transfering=0;
+        }
+        else continue; //Ns and nr equal, send again
+      */
+      ns = 1 -ns;
+      transfering=0;
     }
     if(memcmp(REJ, frame_to_receive, 5) ){ //REJ CASE
-      stopAlarm();
-      done=0; //try again
+      continue;
     }
   }
   return res;
 }
 
-
 int llread(int fd, unsigned char* frame_to_AL ){
 
-  int done=0, state=0, res=0;
+  int done=0, state=0, res=0, i=0, j=0;
+  int destuffed_data_size = 0;
   unsigned char frame_from_port[SIZE_FRAME];
+  unsigned char data_frame_destuffed[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
   unsigned char BCC2 = 0x00;
   unsigned char BCC2aux = 0x00;
-  //build RR and REJ
-  /*if(nr==1){
+  /*
+    //build RR and REJ
+    if(nr==1){
 
-    buildConnectionFrame(RR,A_S,C_RR1);
-    buildConnectionFrame(REJ,A_S, C_REJ1);
-  }else if(nr==0){
+      buildConnectionFrame(RR,A_S,C_RR1);
+      buildConnectionFrame(REJ,A_S, C_REJ1);
+    }else if(nr==0){
 
-    buildConnectionFrame(RR, A_S,C_RR0);
-    buildConnectionFrame(REJ,A_S,C_RR1);
-  }*/
-  //DISC
-
+      buildConnectionFrame(RR, A_S,C_RR0);
+      buildConnectionFrame(REJ,A_S,C_RR1);
+    }
+    //DISC
+  */
   while(!done){
 
     switch(state){
 
-          case 0://reads from port
+      case 0://reads from port
 
-              res=readFromPort(fd,frame_from_port);
+        res=readFromPort(fd,frame_from_port);
+        if(res==-1 || res== -2){
+          
+          return -1;
+        }
+  
+        state=2;
+        break;
+
+      case 1: // IS THIS CASE POSSIBLE?
+
+        if(frame_from_port[2]== C_NS0 && (nr==1)){
+
+
+        }
+        else if(frame_from_port[2] == C_NS1 && (nr==0)){
+
+
+        }
+
+        break;
+
+      case 2: //check BCC1
         
-        			if(res==-1 || res== 0){
-                
-                return -1;
-              }
+        if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
+
+          state=6;
+        }
+        else state =3;
+        break;
+
+      case 3://DESTUFFING
+        destuffing(res-2, frame_from_port, data_frame_destuffed, destuffed_data_size); 
+        state=4;
+        break;
+      case 4:  //check BCC2
+        state=5;
+        break;
+      case 5: 
+
+          if(frame_from_port[2]== C_NS0 && nr==0){
+
+            nr=1; // update nr
+            buildConnectionFrame(RR,A_S,C_RR1);
+          }
+          else if(frame_from_port[2]== C_NS1 && nr==1){
+
+            nr=0;// update nr
+            buildConnectionFrame(RR, A_S,C_RR0);
+          }
+          //stuff well read, then send it to AppLayer
+          for (i = 0, j = 0; i < res - 2; i++, j++) {
+            frame_to_AL[j] = data_frame_destuffed[i];
+        }
+
+          //sends RR
+
+          tcflush(fd,TCIOFLUSH);
+
+          if( write(fd, RR, 5) < 5){
+            
+            perror(" Write() RR:");
+            return -1;
+          }
+
+          done=1;
+          break;
+    case 6: //REJ case
         
-              state=2;
-              break;
-
-          case 1: // IS THIS CASE POSSIBLE?
-
-              if(frame_from_port[2]== C_NS0 && (nr==1)){
-
-
-              }
-              else if(frame_from_port[2] == C_NS1 && (nr==0)){
-
-
-              }
-
-              break;
-
-          case 2: //check BCC1
-              
-              if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
-
-                state=6;
-              }
-              else state =3;
-              break;
-
-          case 3://DESTUFFING
-
-              for (int i = 4; i < res - 1; i++) {
-              if((frame_from_port[i] == ESC) && ((frame_from_port[i+1] == FLAG_PPP) || (frame_from_port[i+1] == ESC_PPP))) {
-                if(frame_from_port[i+1] == FLAG_PPP) {
-                  frame_from_port[i] = FLAG;
-                } else if(frame_from_port[i+1] == ESC_PPP) {
-                  frame_from_port[i] = ESC;
-                }
-                for (int j = i + 1; j < res - 1; j++){
-                  frame_from_port[j] = frame_from_port[j+1];
-                }
-                res--;
-              }
-            }
-              
-              state=4;
-              break;
-          case 4:  //check BCC2
-
-              BCC2= frame_from_port[4];
-
-              for(int i=5; i< res-2; i++){
-
-                BCC2aux= BCC2aux ^frame_from_port[i];
-              }
-
-              if(BCC2 != BCC2aux){
-
-                state=6;
-              }
-
-							else state=5;
+        if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
+          
+          buildConnectionFrame(REJ, A_S,C_REJ0); 
+        }
+        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
+          
+            buildConnectionFrame(REJ, A_S,C_REJ1);
+        }
+    
+        tcflush(fd, TCIOFLUSH);
         
-              break;
-          case 5: 
-
-              if(frame_from_port[2]== C_NS0 && nr==0){
-
-                nr=1; // update nr
-                buildConnectionFrame(RR,A_S,C_RR1);
-              }
-              else if(frame_from_port[2]== C_NS1 && nr==1){
-
-                nr=0;// update nr
-                buildConnectionFrame(RR, A_S,C_RR0);
-              }
-
-
-              //stuff well read, then send it to AppLayer
-
-              //sends RR
-
-              tcflush(fd,TCIOFLUSH);
-
-              if( write(fd, RR, 5) < 5){
-                
-                perror(" Write() RR:");
-                return -1;
-              }
-
-              done=1;
-              break;
-      	case 6: //REJ case
-        		
-        		if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
-              
-              buildConnectionFrame(REJ, A_S,C_REJ0); 
-            }
-        		else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
-              
-               buildConnectionFrame(REJ, A_S,C_REJ1);
-            }
-        
-        		tcflush(fd, TCIOFLUSH);
-        		
-        		if( write( fd, REJ, 5)< 5){
-              
-              perror("Write () REJ:");
-              return -1;
-            }
-        		state=0; // trying again 
-        		break;
-        		
-
+        if( write( fd, REJ, 5)< 5){
+          
+          perror("Write () REJ:");
+          return -1;
+        }
+        state=0; // trying again 
+        break;
     }
-
-
   }
   return res-6;
 }
@@ -542,9 +494,7 @@ char* connectionStateMachine(int fd){
         done = 1;
         break;
       }
-      default:
-        break;
-      }
+    }
   }
   return message;
 }
