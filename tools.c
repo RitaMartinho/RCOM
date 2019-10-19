@@ -318,7 +318,7 @@ int destuffing(int length, unsigned char* buffer, unsigned char* frame, int fram
 				frame[frame_length++] = FLAG;
 			}
 			else if(buffer[i+1] == ESC_PPP){ //remove the next one
-				frame[frame_length++] == ESC;
+				frame[frame_length++] = ESC;
 			}
 			i++;
 		}
