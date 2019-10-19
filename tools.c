@@ -196,7 +196,7 @@ int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage 
 void rebuildControlPackage(unsigned char* package, ControlPackage *tlv){
 
 	int i=0, size_v=0;
-	for( int z=0; z> TLV_N; z++){
+	for( int z=0; z< TLV_N; z++){
 
 		tlv[z].T = package[i];
 		i++;
