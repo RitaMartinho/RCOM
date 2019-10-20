@@ -18,4 +18,3 @@ typedef struct
 }ApplicationLayer;
 
 extern ApplicationLayer Al; 
-

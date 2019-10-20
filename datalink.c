@@ -350,19 +350,23 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
 
       case 3://DESTUFFING
-        destuffed_data_size= destuffing(res-2, frame_from_port, data_frame_destuffed); 
+        destuffed_data_size= destuffing(res-1, frame_from_port, data_frame_destuffed); 
         state=4;
         break;
       case 4:  //check BCC2
 
-        BCC2=frame_from_port[res-2];
+        BCC2=data_frame_destuffed[destuffed_data_size-1];
+
 
         BCC2aux=data_frame_destuffed[0];
 
-        for(int k=1; k<destuffed_data_size; k++){
+        for(int k=1; k<destuffed_data_size-1; k++){
 
           BCC2aux= BCC2aux ^ data_frame_destuffed[k];
         }
+
+        printf("BCC2 : %d\n", BCC2);
+        printf("BCC2aux: %d\n", BCC2aux);
 
         if(BCC2!=BCC2aux){
           state=6;
@@ -383,7 +387,7 @@ int llread(int fd, unsigned char* frame_to_AL ){
             buildConnectionFrame(RR, A_S,C_RR0);
           }
           //stuff well read, then send it to AppLayer
-          for (i = 0, j = 0; i < res - 2; i++, j++) {
+          for (i = 0, j = 0; i < destuffed_data_size-1; i++, j++) {
             frame_to_AL[j] = data_frame_destuffed[i];
         }
 

@@ -297,6 +297,8 @@ int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame
 		else frame[frame_length++]= buffer[i];
 	}
 
+	//BCC2 stuffing
+
 	if(BCC2==FLAG){
 		frame[frame_length++]=ESC;
 		frame[frame_length++]=FLAG_PPP;

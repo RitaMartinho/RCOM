@@ -15,15 +15,20 @@ ApplicationLayer Al;
 
 int main(int argc, char** argv){
 
-    int fd=0, res=0, size=0;
+    int fd=0,res=0, size=0, size1=0, res1=0;
     struct termios oldtio;
-    unsigned char test[]="ol~a";   
+    unsigned char test[]="gtaiu~~~ebg";  
+    unsigned char test1[]="gtaiu~~~ibg"; 
     unsigned char package[SIZE_DATAPACKAGE];
     unsigned char  package2[SIZE_DATAPACKAGE];
+    unsigned char  package3[SIZE_DATAPACKAGE];
+    unsigned char  package4[SIZE_DATAPACKAGE];
+
     int seq_n=0;
     
+    size= buildDataPackage(test,package,12, &seq_n);
+    size1= buildDataPackage(test1,package3,12, &seq_n);
 
-    size= buildDataPackage(test,package,4, &seq_n);
 
     printf("size of package: %d\n", size);
     
@@ -49,7 +54,7 @@ int main(int argc, char** argv){
   scanf("%d",&i);
   mode =i-1;
 
-  switch (mode)
+  /*switch (mode)
   {
     case SEND:
       printf("What's the name of the file you wanna transfer?\n");
@@ -58,9 +63,9 @@ int main(int argc, char** argv){
     case RECEIVE:
       printf("How do you wanna name the incoming file?\n");
       break;
-  }
+  }*/
 
-  int done = 0;
+  /*int done = 0;
   char file[20];
 	while (!done) {
 		printf("\nFILENAME: ");
@@ -78,6 +83,9 @@ int main(int argc, char** argv){
   printf("File lenght= %d\n", Al.file_size);
 
 
+
+  */
+ 
   if((res=llopen(fd, mode))==-1){
     printf("llopen not working \n");
     printf("Connection not possible, check cable and try again.\n");
@@ -87,8 +95,10 @@ int main(int argc, char** argv){
 
   if(mode==0){
      res=llwrite(fd,package,size);
+      if(res==-1) printf("llwrite didn't work\n");
+      res1=llwrite(fd,package3, size1);
+      if(res1==-1) printf("llwrite 1 didn't work\n");
 
-     if(res==-1) printf("llwrite didn't work\n");
   }
 
   if(mode==1){
@@ -98,9 +108,24 @@ int main(int argc, char** argv){
       printf("llread didn't work\n");
       return 1;
     }
-      for(int i=4; i<10; i++){
+
+    res1=llread(fd,package4);
+
+    if(res1==-1){
+      printf("llread didn't work\n");
+      return 1;
+    }
+
+      for(int i=4; i<res; i++){
 
         printf("%c", package2[i]);
+      }
+
+            printf("\n");
+
+      for(int i=4; i<res1; i++){
+
+        printf("%c", package4[i]);
       }
       printf("\n");
 
