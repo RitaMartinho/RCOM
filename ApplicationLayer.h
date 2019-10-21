@@ -13,8 +13,13 @@ typedef struct
     // Type of connection (Sender or Receiver)
     ConnectionMode mode;
     //file to be transfered
-    char *file;
+    char *file_name;
     int file_size;
 }ApplicationLayer;
 
+typedef enum {
+    PARAM_FILE_SIZE, PARAM_FILE_NAME
+} T_type;
+
 extern ApplicationLayer Al; 
+

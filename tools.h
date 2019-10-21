@@ -8,7 +8,7 @@
 #define TRUE 1
 #define SIZE_DATAPACKAGE 65539 // size of data packages = 256*(2⁸-1)+(2⁸-1) + 4
 #define SIZE_FRAME 131085//(SIZE_DATAPACKAGE+1)*2+5
-#define TLV_N 3// name of file, size of file, falgs
+#define TLV_N 2// name of file, size of file, falgs
 
 
 //DATALINK LEVEL
