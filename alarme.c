@@ -38,3 +38,4 @@ void setAlarm(int time){
    sigaction(SIGALRM, &action, NULL);
    alarm(time);
 }
+

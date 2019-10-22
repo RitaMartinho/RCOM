@@ -245,7 +245,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
     buildConnectionFrame(RR,A_S,C_RR0);
     buildConnectionFrame(REJ,A_S,C_REJ1);
   }
-
+  tcflush(fd, TCIOFLUSH);
 	frame_size= buildFrame(frame_to_send, ns, buffer, length);
 
   while (transfering)
@@ -303,14 +303,18 @@ int llread(int fd, unsigned char* frame_to_AL ){
   /*
     //build RR and REJ
     if(nr==1){
+
       buildConnectionFrame(RR,A_S,C_RR1);
       buildConnectionFrame(REJ,A_S, C_REJ1);
     }else if(nr==0){
+
       buildConnectionFrame(RR, A_S,C_RR0);
       buildConnectionFrame(REJ,A_S,C_RR1);
     }
     //DISC
   */
+
+  printf("entering llread\n");
   while(!done){
 
     switch(state){
@@ -318,6 +322,8 @@ int llread(int fd, unsigned char* frame_to_AL ){
       case 0://reads from port
 
         res=readFromPort(fd,frame_from_port);
+
+        printf("read from port, %d\n", res);
         if(res==-1 || res== -2){
           
           return -1;
@@ -344,24 +350,21 @@ int llread(int fd, unsigned char* frame_to_AL ){
         if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
 
           state=6;
-          break;
         }
         else state =3;
         break;
 
       case 3://DESTUFFING
-        destuffed_data_size= destuffing(res-1, frame_from_port, data_frame_destuffed); 
+        destuffed_data_size = destuffing(res-1, frame_from_port, data_frame_destuffed); 
         state=4;
         break;
       case 4:  //check BCC2
 
+        printf("des data dize : %d",destuffed_data_size);
         BCC2=data_frame_destuffed[destuffed_data_size-1];
-
-
         BCC2aux=data_frame_destuffed[0];
 
         for(int k=1; k<destuffed_data_size-1; k++){
-
           BCC2aux= BCC2aux ^ data_frame_destuffed[k];
         }
 
@@ -392,30 +395,26 @@ int llread(int fd, unsigned char* frame_to_AL ){
         }
 
           //sends RR
-
           tcflush(fd,TCIOFLUSH);
 
           if( write(fd, RR, 5) < 5){
-            
             perror(" Write() RR:");
             return -1;
           }
 
+          printf("Leaving llread\n");
           done=1;
           break;
     case 6: //REJ case
         
         if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
-          
           buildConnectionFrame(REJ, A_S,C_REJ0); 
         }
-        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
-          
+        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1         
             buildConnectionFrame(REJ, A_S,C_REJ1);
         }
     
-        tcflush(fd, TCIOFLUSH);
-        
+        tcflush(fd, TCIOFLUSH);       
         if( write( fd, REJ, 5)< 5){
           
           perror("Write () REJ:");
@@ -515,3 +514,4 @@ char* connectionStateMachine(int fd){
   }
   return message;
 }
+

@@ -91,7 +91,6 @@ void buildConnectionFrame( unsigned char *connectionFrame, unsigned char A, unsi
 
 } //supervisionFrame()
 
-
 int buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght){ //belongs to DATALINK
 
 	int l=0;
@@ -128,18 +127,14 @@ unsigned char buildBCC2(unsigned char *message, int lenght){ //belongs to datali
 }
 
 //builds data package from file
-int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int * seq_n){
+int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int* seq_n){
 
-	int aux=0, i=0;
+	int i=0, aux=0;
 	package[0]= AP_DATA; //C
 	package[1]=(char)(*seq_n)++;
 
-	if((*seq_n)== 256){ //module 255 - GONÇALO
-		*seq_n=0;
-	}
-	 
-	aux= size %256; //
-	package[2]=(size- aux)/256;
+	aux=size%256;
+	package[2]=(size -aux)/256;
 	package[3]=aux;
 
 	for(i=0; i<size; i++){
@@ -157,8 +152,8 @@ void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data){
 	int size_of_data=0;
 
 	(*packet_data).N = packet[0];
-	(*packet_data).L1= packet[1];
-	(*packet_data).L2= packet[2];
+	(*packet_data).L2= packet[1];
+	(*packet_data).L1= packet[2];
 	(*packet_data).file_data=(unsigned char*)malloc(256*(int)packet[1]+(int)packet[2]); //as shown in "guião-PDF"
 
 	size_of_data= 256*(int)(*packet_data).L2+(int)(*packet_data).L1;
@@ -172,24 +167,19 @@ void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data){
 
 int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage *tlv){
 
-
 	int l=0, size=0;
-
 	package[l++]=C; //control
 	
-	for(int i=0; i<TLV_N; i++){
-
+	for(int i=0; i<TLV_N ; i++){
 		package[l++]= tlv[i].T;
 		package[l++]= tlv[i].L;
 		
 		size=(int)tlv[i].L;
 
-		for(int j=0; j< size; j++){
-
+		for(int j=0; j< size && tlv[i].V!=NULL ; j++){
 			package[l++] = tlv[i].V[j]; 
 		}
 	}
-
 	return l; // returns lenght of control package created 
 }
 
@@ -200,6 +190,7 @@ void rebuildControlPackage(unsigned char* package, ControlPackage *tlv){
 
 		tlv[z].T = package[i];
 		i++;
+		tlv[z].L=sizeof(package[i]);
 		tlv[z].L= package[i];
 
 		size_v=(int)(tlv[z].L);
@@ -259,8 +250,7 @@ int readFromPort(int fd, unsigned char* frame){
             else{ // somewhere else in the middle, starts again
 
                 if(frame[l-1] == FLAG){
-					printf("WEIRD FLAG POINT\n");
-                    memset(frame, 0, SIZE_FRAME);
+					memset(frame, 0, SIZE_FRAME);
                     l=0;
                     frame[l++]=FLAG;
                 }
@@ -296,8 +286,6 @@ int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame
 		}
 		else frame[frame_length++]= buffer[i];
 	}
-
-	//BCC2 stuffing
 
 	if(BCC2==FLAG){
 		frame[frame_length++]=ESC;

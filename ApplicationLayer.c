@@ -6,32 +6,32 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+
 #include "string.h"
 #include "ApplicationLayer.h"
 #include "tools.h"
 #include "datalink.h"
+#include "sender.h"
 
 ApplicationLayer Al;
+ApplicationLayer Alr;
+int receiver(int fd);
 
 int main(int argc, char** argv){
 
-    int fd=0,res=0, size=0, size1=0, res1=0;
+
+    int fd=0, res=0;
     struct termios oldtio;
-    unsigned char test[]="gtaiu~~~ebg";  
-    unsigned char test1[]="gtaiu~~~ibg"; 
-    unsigned char package[SIZE_DATAPACKAGE];
-    unsigned char  package2[SIZE_DATAPACKAGE];
-    unsigned char  package3[SIZE_DATAPACKAGE];
-    unsigned char  package4[SIZE_DATAPACKAGE];
 
-    int seq_n=0;
-    
-    size= buildDataPackage(test,package,12, &seq_n);
-    size1= buildDataPackage(test1,package3,12, &seq_n);
+    int done = 0;
+    char file[20];
+    /* //unsigned char test[]="ol~a";   
+      //unsigned char package[SIZE_DATAPACKAGE];
+      //unsigned char  package2[SIZE_DATAPACKAGE];
 
-
-    printf("size of package: %d\n", size);
-    
+      //size= buildDataPackage(test,package,4, &seq_n);
+      //printf("size of package: %d\n", size);
+    */  
     if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
   	      (strcmp("/dev/ttyS4", argv[1])!=0) )) {
@@ -54,90 +54,83 @@ int main(int argc, char** argv){
   scanf("%d",&i);
   mode =i-1;
 
-  /*switch (mode)
+  switch (mode)
   {
     case SEND:
       printf("What's the name of the file you wanna transfer?\n");
+
+
+      while (!done) {
+        printf("\nFILENAME: ");
+
+          if (scanf("%s", file) == 1){
+                  done = 1;}
+          else
+            printf("Invalid input. Try again:\n");
+
+              
+          (Al.file_name) = file;
+          Al_setter();
+      
+      }
       break;
     
     case RECEIVE:
       printf("How do you wanna name the incoming file?\n");
-      break;
-  }*/
 
-  /*int done = 0;
-  char file[20];
-	while (!done) {
-		printf("\nFILENAME: ");
+      	while (!done) {
+		    printf("\nFILENAME: ");
 
-		if (scanf("%s", file) == 1){
+		    if (scanf("%s", file) == 1){
             done = 1;}
-		else
-			printf("Invalid input. Try again:\n");
+		    else
+			      printf("Invalid input. Try again:\n");
+       }
+         (Alr.file_name) = file;
+
+      break;
   }
-  
-  (Al.file) = file;
-  int file_fd = open(Al.file, O_RDONLY);
-  (Al.file_size)=fileLenght(file_fd);
 
-  printf("File lenght= %d\n", Al.file_size);
-
-
-
-  */
- 
   if((res=llopen(fd, mode))==-1){
     printf("llopen not working \n");
     printf("Connection not possible, check cable and try again.\n");
     return 1;
   }
 
+  switch (mode)
+  {
+    case SEND:
+     sender(fd);
+      close(Al.fd);
 
-  if(mode==0){
-     res=llwrite(fd,package,size);
+      break;
+  
+    case RECEIVE:
+      receiver(fd);
+      //close();
+      break;
+  }
+  /*
+    if(mode==0){
+      res=llwrite(fd,package,size);
+
       if(res==-1) printf("llwrite didn't work\n");
-      res1=llwrite(fd,package3, size1);
-      if(res1==-1) printf("llwrite 1 didn't work\n");
-
-  }
-
-  if(mode==1){
-      res= llread(fd,package2);
-
-    if(res==-1){
-      printf("llread didn't work\n");
-      return 1;
     }
 
-    res1=llread(fd,package4);
+    if(mode==1){
+        res= llread(fd,package2);
 
-    if(res1==-1){
-      printf("llread didn't work\n");
-      return 1;
+      if(res==-1){
+        printf("llread didn't work\n");
+        return 1;
+      }
     }
-
-      for(int i=4; i<res; i++){
-
-        printf("%c", package2[i]);
-      }
-
-            printf("\n");
-
-      for(int i=4; i<res1; i++){
-
-        printf("%c", package4[i]);
-      }
-      printf("\n");
-
-  }
- 
+ */
   if((res=llclose(fd, mode))==-1){
     printf("llclose not working \n");
   }
 
-
   if(resetPort(fd,&oldtio)<0){
-
     perror("resetPort():");
     exit(-1);
   }
@@ -145,19 +138,16 @@ int main(int argc, char** argv){
   return 0;
 }
 
-
 //returns 0 in succes, -1 if error
 int receiver(int fd){
 
-  int res=0, done=0, state=0, name_size=0, output_file=0, its_data=0;
+  FILE *fd1;
+  int res=0, done=0, state=0, name_size=0, output_file=0, its_data=0, size=0, L1=0, L2=0, c_value=0;
   unsigned char data_from_llread[SIZE_DATAPACKAGE];
   unsigned char package[SIZE_DATAPACKAGE-1];
   ControlPackage start[TLV_N], end[TLV_N];
   DataPackage data;
 
-
-
-  res=llopen(fd,RECEIVE);
   if(res<0){
     perror("llopen(receive):");
     return -1;
@@ -169,26 +159,32 @@ int receiver(int fd){
 
       case 0: //reading start packages and full Al struct
             
+          
             res=llread(fd,data_from_llread);
+
             if(res<0){
               perror("llread()");
               return -1;
             }
 
+            c_value=data_from_llread[0];
+            
             for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
+ 
               package[i]=data_from_llread[i+1]; 
             }
 
-            if(data_from_llread[0]==AP_START){
+            if(c_value==AP_START){
+               printf(" right c %d\n", c_value);
 
               rebuildControlPackage(package,start);
 
               for(int i=0; i<TLV_N; i++){
 
                 if(start[i].T==PARAM_FILE_SIZE){
-
-                  Al.file_size=1 /* contas maradas*/;
+                  const char *c = &start[i].V[0];
+                  Al.file_size=atoi(c); 
                 }
 
                 if(start[i].T==PARAM_FILE_NAME){
@@ -200,18 +196,22 @@ int receiver(int fd){
               }
             }
 
-            if(data_from_llread[0]==AP_DATA){
+            else if(c_value==AP_DATA){
 
-              its_data=1;
+              its_data=2;
               state=1;
               break;
             }
+            else {
+              printf(" wrong c %d\n", c_value);
+              return -1;
 
-            output_file=open(Al.file_name, O_CREAT | O_WRONLY, S_IWUSR |S_IRUSR |S_IXUSR );
-            memset(data_from_llread, 0, SIZE_DATAPACKAGE);
-            
+            }
+
+            output_file=open(Alr.file_name, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH);
+            c_value=0;
             break;
-    case 1:
+      case 1:
 
           if(its_data==0){ // we do this if so it wont read again if we know already from case 1 that it is data
 
@@ -221,6 +221,9 @@ int receiver(int fd){
 
               perror("llread()");
             }
+
+            c_value=data_from_llread[0];
+
 
             its_data=1; // so it will start anyways in the next if
           }
@@ -233,31 +236,37 @@ int receiver(int fd){
             }
           }
 
-          if(data_from_llread[0]==AP_DATA){
+          if(its_data==2 || its_data==1){
+          if(c_value==AP_DATA){
 
             rebuildDataPackage(package,&data);
           }
 
-          if(data_from_llread[0]==AP_END){
-
+          if(c_value==AP_END){
+            
+            printf("It's and end\n");
             state=2;
             break;
           }
+          }
 
-          res=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1 );
+          
+          res=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1);
 
-          if(res <0){
+          if(res<0){
 
             perror("write() to output file:");
             return -1;
           }
 
-          memset(data_from_llread, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
+          memset(package, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
       
           its_data=0; // so it can read more
 
+          c_value=0;
+
           break;
-    case 2:
+      case 2:
 
           for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
@@ -285,14 +294,7 @@ int receiver(int fd){
           break;   
     }
   }
-
-  res=llclose(fd,RECEIVE);
-  if(res<0){
-
-    perror("llclose():");
-    return -1;
-  }
-
+  
   if(close(output_file)<0){
 
     perror("close():");
