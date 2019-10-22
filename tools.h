@@ -6,7 +6,7 @@
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
-#define SIZE_DATAPACKAGE 8192 // size of data packages = 255*256+255
+#define SIZE_DATAPACKAGE 8192// size of data packages = 255*256+255
 #define SIZE_FRAME (8192+1)*2+5
 #define TLV_N 2// name of file, size of file
 

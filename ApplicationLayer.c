@@ -14,12 +14,17 @@
 #include "sender.h"
 
 ApplicationLayer Al;
+ApplicationLayer Alr;
 int receiver(int fd);
 
 int main(int argc, char** argv){
 
+
     int fd=0, res=0;
     struct termios oldtio;
+
+    int done = 0;
+    char file[20];
     /* //unsigned char test[]="ol~a";   
       //unsigned char package[SIZE_DATAPACKAGE];
       //unsigned char  package2[SIZE_DATAPACKAGE];
@@ -53,27 +58,38 @@ int main(int argc, char** argv){
   {
     case SEND:
       printf("What's the name of the file you wanna transfer?\n");
+
+
+      while (!done) {
+        printf("\nFILENAME: ");
+
+          if (scanf("%s", file) == 1){
+                  done = 1;}
+          else
+            printf("Invalid input. Try again:\n");
+
+              
+          (Al.file_name) = file;
+          Al_setter();
+      
+      }
       break;
     
     case RECEIVE:
       printf("How do you wanna name the incoming file?\n");
+
+      	while (!done) {
+		    printf("\nFILENAME: ");
+
+		    if (scanf("%s", file) == 1){
+            done = 1;}
+		    else
+			      printf("Invalid input. Try again:\n");
+       }
+         (Alr.file_name) = file;
+
       break;
   }
-
-  int done = 0;
-  char file[20];
-	while (!done) {
-		printf("\nFILENAME: ");
-
-		if (scanf("%s", file) == 1){
-            done = 1;}
-		else
-			printf("Invalid input. Try again:\n");
-  }
-  
-  (Al.file_name) = file;
-    Al_setter();
-  
 
   if((res=llopen(fd, mode))==-1){
     printf("llopen not working \n");
@@ -85,10 +101,13 @@ int main(int argc, char** argv){
   {
     case SEND:
      sender(fd);
+      close(Al.fd);
+
       break;
   
     case RECEIVE:
       receiver(fd);
+      //close();
       break;
   }
   /*
@@ -123,7 +142,7 @@ int main(int argc, char** argv){
 int receiver(int fd){
 
   FILE *fd1;
-  int res=0, done=0, state=0, name_size=0, output_file=0, its_data=0, size=0, L1=0, L2=0, res_write=0;
+  int res=0, done=0, state=0, name_size=0, output_file=0, its_data=0, size=0, L1=0, L2=0, c_value=0;
   unsigned char data_from_llread[SIZE_DATAPACKAGE];
   unsigned char package[SIZE_DATAPACKAGE-1];
   ControlPackage start[TLV_N], end[TLV_N];
@@ -140,18 +159,24 @@ int receiver(int fd){
 
       case 0: //reading start packages and full Al struct
             
+          
             res=llread(fd,data_from_llread);
+
             if(res<0){
               perror("llread()");
               return -1;
             }
 
+            c_value=data_from_llread[0];
+            
             for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
+ 
               package[i]=data_from_llread[i+1]; 
             }
 
-            if(data_from_llread[0]==AP_START){
+            if(c_value==AP_START){
+               printf(" right c %d\n", c_value);
 
               rebuildControlPackage(package,start);
 
@@ -171,16 +196,20 @@ int receiver(int fd){
               }
             }
 
-            if(data_from_llread[0]==AP_DATA){
+            else if(c_value==AP_DATA){
 
-              its_data=1;
+              its_data=2;
               state=1;
               break;
             }
+            else {
+              printf(" wrong c %d\n", c_value);
+              return -1;
 
-            output_file=open("rita1.gif", O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH);
-            memset(data_from_llread, 0, SIZE_DATAPACKAGE);
-            
+            }
+
+            output_file=open(Alr.file_name, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH);
+            c_value=0;
             break;
       case 1:
 
@@ -188,11 +217,13 @@ int receiver(int fd){
 
             res=llread(fd, data_from_llread);
 
-            printf("llread(): %d", res);
             if(res<0){
 
               perror("llread()");
             }
+
+            c_value=data_from_llread[0];
+
 
             its_data=1; // so it will start anyways in the next if
           }
@@ -205,23 +236,22 @@ int receiver(int fd){
             }
           }
 
-          if(data_from_llread[0]==AP_DATA){
+          if(its_data==2 || its_data==1){
+          if(c_value==AP_DATA){
 
             rebuildDataPackage(package,&data);
           }
 
-          if(data_from_llread[0]==AP_END){
+          if(c_value==AP_END){
             
             printf("It's and end\n");
             state=2;
             break;
           }
+          }
 
           
-          res=pwrite(output_file, data.file_data, 256*(int)data.L2+(int)data.L1,res_write);
-          res_write+=res;
-
-          printf("ESCRITO NO FILE: %d\n", res_write);
+          res=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1);
 
           if(res<0){
 
@@ -229,9 +259,11 @@ int receiver(int fd){
             return -1;
           }
 
-          memset(data_from_llread, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
+          memset(package, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
       
           its_data=0; // so it can read more
+
+          c_value=0;
 
           break;
       case 2:

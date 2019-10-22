@@ -80,9 +80,9 @@ void sender(int fd){
 					}
 
                     printf("data package size: %d\n", res);
+                    printf("C sent %d \n", DataPackage[0]);
 
-
-
+                    
                     res = llwrite(fd, DataPackage,res1);
 
                     printf("llwriten: %d\n", res);
