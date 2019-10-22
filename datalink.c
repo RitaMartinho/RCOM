@@ -332,10 +332,8 @@ int llread(int fd, unsigned char* frame_to_AL ){
 
         if(frame_from_port[2]== C_NS0 && (nr==1)){
 
-
         }
         else if(frame_from_port[2] == C_NS1 && (nr==0)){
-
 
         }
 
@@ -351,11 +349,25 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
 
       case 3://DESTUFFING
-        destuffing(res-2, frame_from_port, data_frame_destuffed, destuffed_data_size); 
+        destuffed_data_size = destuffing(res-1, frame_from_port, data_frame_destuffed); 
         state=4;
         break;
       case 4:  //check BCC2
-        state=5;
+        BCC2=data_frame_destuffed[destuffed_data_size-1];
+        BCC2aux=data_frame_destuffed[0];
+
+        for(int k=1; k<destuffed_data_size-1; k++){
+          BCC2aux= BCC2aux ^ data_frame_destuffed[k];
+        }
+
+       // printf("BCC2 : %d\n", BCC2);
+        //printf("BCC2aux: %d\n", BCC2aux);
+
+        if(BCC2!=BCC2aux){
+          state=6;
+          break;
+        }
+        else state=5;
         break;
       case 5: 
 
@@ -370,16 +382,14 @@ int llread(int fd, unsigned char* frame_to_AL ){
             buildConnectionFrame(RR, A_S,C_RR0);
           }
           //stuff well read, then send it to AppLayer
-          for (i = 0, j = 0; i < res - 2; i++, j++) {
+          for (i = 0, j = 0; i < destuffed_data_size-1; i++, j++) {
             frame_to_AL[j] = data_frame_destuffed[i];
         }
 
           //sends RR
-
           tcflush(fd,TCIOFLUSH);
 
           if( write(fd, RR, 5) < 5){
-            
             perror(" Write() RR:");
             return -1;
           }
@@ -389,16 +399,13 @@ int llread(int fd, unsigned char* frame_to_AL ){
     case 6: //REJ case
         
         if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
-          
           buildConnectionFrame(REJ, A_S,C_REJ0); 
         }
-        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
-          
+        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1         
             buildConnectionFrame(REJ, A_S,C_REJ1);
         }
     
-        tcflush(fd, TCIOFLUSH);
-        
+        tcflush(fd, TCIOFLUSH);       
         if( write( fd, REJ, 5)< 5){
           
           perror("Write () REJ:");
