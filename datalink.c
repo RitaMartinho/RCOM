@@ -148,7 +148,6 @@ int llclose(int fd, ConnectionMode mode){
                 frame = connectionStateMachine(fd);
 
                 if( timeout ){
-                  n_timeout++; 
                   if(n_timeout >= MaxTries){
                     stopAlarm();
                     printf("Nothing received for 3 times\n");
@@ -163,9 +162,9 @@ int llclose(int fd, ConnectionMode mode){
                   }
                 }
               }
-              stopAlarm();
               
               if(frame!= NULL && DISC[2]==frame[2] ){ //GOT DISC
+                stopAlarm();
                   state=2;
               }
               else state=0;
@@ -235,7 +234,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   int transfering=1, res=0, frame_size=0, done=1;
   unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
-  
+  //n_timeout=0;
   //BUILD RR and REJ for comparison
   if(ns==0){
     buildConnectionFrame(RR,A_S,C_RR1);
@@ -245,7 +244,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
     buildConnectionFrame(RR,A_S,C_RR0);
     buildConnectionFrame(REJ,A_S,C_REJ1);
   }
-
+  tcflush(fd, TCIOFLUSH);
 	frame_size= buildFrame(frame_to_send, ns, buffer, length);
 
   while (transfering)
@@ -254,9 +253,11 @@ int llwrite(int fd, unsigned char* buffer,int length ){
     res = write(fd, frame_to_send, frame_size);
     setAlarm(3);
     done = readFromPort(fd, frame_to_receive);
+    if(done!=0)
+      stopAlarm();
     while(!done) {
       if(timeout){
-        n_timeout++;
+        printf("n_timeout=%d\n", n_timeout);
         if(n_timeout >=MaxTries){
           stopAlarm();        
           printf("Nothing received for 3 times\n");
@@ -264,14 +265,13 @@ int llwrite(int fd, unsigned char* buffer,int length ){
         }
       	else{
           printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was received after 3 seconds\n");
-          printf("Gonna try again!\n\n\n"); 
+          printf("Gonna try again!\n\n"); 
           timeout=0;
-          done=0;
+          done=1;
           break;
         }
       }
     }
-    stopAlarm(); //something has been received by this point
     
     if( memcmp(RR,frame_to_receive, 5) == 0 ){ //CHECK TO SEE IF RR
     	/*
@@ -313,6 +313,8 @@ int llread(int fd, unsigned char* frame_to_AL ){
     }
     //DISC
   */
+
+  printf("entering llread\n");
   while(!done){
 
     switch(state){
@@ -320,6 +322,8 @@ int llread(int fd, unsigned char* frame_to_AL ){
       case 0://reads from port
 
         res=readFromPort(fd,frame_from_port);
+
+        printf("read from port, %d\n", res);
         if(res==-1 || res== -2){
           
           return -1;
@@ -351,11 +355,27 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
 
       case 3://DESTUFFING
-        destuffing(res-2, frame_from_port, data_frame_destuffed, destuffed_data_size); 
+        destuffed_data_size = destuffing(res-1, frame_from_port, data_frame_destuffed); 
         state=4;
         break;
       case 4:  //check BCC2
-        state=5;
+
+        printf("des data dize : %d",destuffed_data_size);
+        BCC2=data_frame_destuffed[destuffed_data_size-1];
+        BCC2aux=data_frame_destuffed[0];
+
+        for(int k=1; k<destuffed_data_size-1; k++){
+          BCC2aux= BCC2aux ^ data_frame_destuffed[k];
+        }
+
+        printf("BCC2 : %d\n", BCC2);
+        printf("BCC2aux: %d\n", BCC2aux);
+
+        if(BCC2!=BCC2aux){
+          state=6;
+          break;
+        }
+        else state=5;
         break;
       case 5: 
 
@@ -370,35 +390,31 @@ int llread(int fd, unsigned char* frame_to_AL ){
             buildConnectionFrame(RR, A_S,C_RR0);
           }
           //stuff well read, then send it to AppLayer
-          for (i = 0, j = 0; i < res - 2; i++, j++) {
+          for (i = 0, j = 0; i < destuffed_data_size-1; i++, j++) {
             frame_to_AL[j] = data_frame_destuffed[i];
         }
 
           //sends RR
-
           tcflush(fd,TCIOFLUSH);
 
           if( write(fd, RR, 5) < 5){
-            
             perror(" Write() RR:");
             return -1;
           }
 
+          printf("Leaving llread\n");
           done=1;
           break;
     case 6: //REJ case
         
         if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
-          
           buildConnectionFrame(REJ, A_S,C_REJ0); 
         }
-        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
-          
+        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1         
             buildConnectionFrame(REJ, A_S,C_REJ1);
         }
     
-        tcflush(fd, TCIOFLUSH);
-        
+        tcflush(fd, TCIOFLUSH);       
         if( write( fd, REJ, 5)< 5){
           
           perror("Write () REJ:");
