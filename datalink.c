@@ -249,7 +249,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   { 
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
-    printf("Wrote this %s \n", frame_to_send);
+    //printf("Wrote this %s \n", frame_to_send);
     setAlarm(3);
     done = readFromPort(fd, frame_to_receive);
     if(done!=0)
