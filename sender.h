@@ -8,4 +8,4 @@ void Al_setter();
 //sets tlv parameters
 void tlv_setter( ControlPackage *tlv);
 
-void sender(int fd);
+int sender(int fd);

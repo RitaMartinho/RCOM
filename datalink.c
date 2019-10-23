@@ -17,14 +17,13 @@ int nr=0;
 
 int llopen(int fd, ConnectionMode mode){
 
-  int connected = 0, state=0, res=0, n_timeout=0;
+  int connected = 0, state=0, res=0;
   unsigned char SET[5], UA[5];
   char * frame;
 
   //Building frames
   buildConnectionFrame(SET,A_S,C_SET);
   buildConnectionFrame(UA,A_S,C_UA);
-  timeout_counter = 1;
   switch (mode){
     case SEND:
         while(connected==0){
@@ -51,8 +50,7 @@ int llopen(int fd, ConnectionMode mode){
               while(frame == NULL){
                 frame= connectionStateMachine(fd);
 
-                if(timeout){  
-                  n_timeout++;
+                if(timeout){ 
                   if(n_timeout >= MaxTries){
                     stopAlarm();
                     printf("Nothing received for 3 times\n");
@@ -67,9 +65,9 @@ int llopen(int fd, ConnectionMode mode){
                   }
                 }
               }                  
-              stopAlarm(); // something has been received by this point
 
               if( frame != NULL && UA[2]==frame[2] ){
+              stopAlarm(); // something has been received by this point
                 printf("Connection established!\n");
                 connected=1;
               }
@@ -121,7 +119,6 @@ int llclose(int fd, ConnectionMode mode){
   buildConnectionFrame(UA,A_S,C_UA);
   buildConnectionFrame(DISC, A_S, C_DISC);
 
-  timeout_counter=1;
   switch (mode){
     case SEND:
         while(connected==0){
@@ -232,7 +229,7 @@ int llclose(int fd, ConnectionMode mode){
 
 int llwrite(int fd, unsigned char* buffer,int length ){
   
-  int transfering=1, res=0, frame_size=0, done=1;
+  int transfering=1, res=0, frame_size=0, done=0;
   unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
   
@@ -253,10 +250,10 @@ int llwrite(int fd, unsigned char* buffer,int length ){
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
     setAlarm(3);
-    done = readFromPort(fd, frame_to_receive);
+    done=0;
     while(!done) {
+      done = readFromPort(fd, frame_to_receive);
       if(timeout){
-        n_timeout++;
         if(n_timeout >=MaxTries){
           stopAlarm();        
           printf("Nothing received for 3 times\n");
@@ -266,12 +263,11 @@ int llwrite(int fd, unsigned char* buffer,int length ){
           printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was received after 3 seconds\n");
           printf("Gonna try again!\n\n\n"); 
           timeout=0;
-          done=0;
+          //done=0;
           break;
         }
       }
     }
-    stopAlarm(); //something has been received by this point
     
     if( memcmp(RR,frame_to_receive, 5) == 0 ){ //CHECK TO SEE IF RR
     	/*
@@ -281,6 +277,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
         }
         else continue; //Ns and nr equal, send again
       */
+      stopAlarm(); //something has been received by this point
       ns = 1 -ns;
       transfering=0;
     }

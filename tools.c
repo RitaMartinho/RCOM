@@ -238,13 +238,11 @@ int readFromPort(int fd, unsigned char* frame){
             return -1;
         }
 		else if(res==0){
-			 printf("read() from por =0\n");
-			 //return 0;
+			 return 0;
 		}
         else if(tmp== FLAG){ // evaluate if end or start point
 
             if(l==0){ //start point 
-				printf("START FRAME!\n");
                 frame[l++]=tmp;
             }
             else{ // somewhere else in the middle, starts again
@@ -257,7 +255,6 @@ int readFromPort(int fd, unsigned char* frame){
                 else{ // in the end
                     frame[l++]= tmp;
                     done=1;
-					printf("TERMINATING FLAG\n\n");
                 }
             }
         }
@@ -267,7 +264,6 @@ int readFromPort(int fd, unsigned char* frame){
             }
         }
     }
-	printf("Leaving readformPort\n\n");
     return l;
 }
 
