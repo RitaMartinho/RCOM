@@ -232,15 +232,16 @@ int readFromPort(int fd, unsigned char* frame){
     memset(frame, 0, SIZE_FRAME);
 
     while(!done){
+		printf("\nFD= %d\n", fd);
 		res=read(fd, &tmp,1);
         if(res==-1){
             perror("read() from port = -1");
             return -1;
         }
 		else if(res==0){
-			 printf("read() from por =0\n");
-			 done=1;
-			 //TIME-OUT CASSION
+			printf("read() from por =0\n");
+			done=1;
+			//TIME-OUT CASSION
 		}
         else if(tmp== FLAG){ // evaluate if end or start point
 
