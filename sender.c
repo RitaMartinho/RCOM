@@ -59,40 +59,40 @@ int sender(int fd){
 
     while(count_bytes2 <Al.file_size) {
 
-					if(count_bytes2 + SIZE_DATAPACKAGE-4 <Al.file_size) {
-						ler = SIZE_DATAPACKAGE-4;
-						count_bytes2 += ler;
-					} else {
-						ler =Al.file_size - count_bytes2;
-						count_bytes2 += ler;
-					}
+        if(count_bytes2 + SIZE_DATAPACKAGE-4 <Al.file_size) {
+            ler = SIZE_DATAPACKAGE-4;
+            count_bytes2 += ler;
+        } else {
+            ler =Al.file_size - count_bytes2;
+            count_bytes2 += ler;
+        }
 
-					if((res = read(Al.fd, buffer, ler)) < 0) {
-						perror("read()");
-						return -1;
-					}
+        if((res = read(Al.fd, buffer, ler)) < 0) {
+            perror("read()");
+            return -1;
+        }
 
-                    //printf("res: %d",res);
+        //printf("res: %d",res);
 
-					if((res1 = buildDataPackage(buffer, DataPackage, res, &i)) < 0) {
-						perror("buildDataPackage");
-						return -1;
-					}
+        if((res1 = buildDataPackage(buffer, DataPackage, res, &i)) < 0) {
+            perror("buildDataPackage");
+            return -1;
+        }
 
-                    printf("data package size: %d\n", res);
+        printf("data package size: %d\n", res1);
 
-                    
-                    res = llwrite(fd, DataPackage,res1);
+        
+        res = llwrite(fd, DataPackage,res1);
 
-                    printf("llwriten: %d\n", res);
-					if(res < 0) {
-						printf("Connection LOST, check cable and try again\n");
-						return -1;
-					} else {
-						count_bytes += res;
-					}
+        printf("llwriten: %d\n", res);
+        if(res < 0) {
+            printf("Connection LOST, check cable and try again\n");
+            return -1;
+        } else {
+            count_bytes += res;
+        }
 
-                    memset(buffer, 0, SIZE_DATAPACKAGE);
+        memset(buffer, 0, SIZE_DATAPACKAGE);
 
     }
     /*while( bytesread> 0){
