@@ -234,6 +234,7 @@ int readFromPort(int fd, unsigned char* frame){
     while(!done){
 		printf("\nFD= %d\n", fd);
 		res=read(fd, &tmp,1);
+		printf("RES = %d\n", res);
         if(res==-1){
             perror("read() from port = -1");
             return -1;
