@@ -137,13 +137,8 @@ int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, in
 	package[2]=(size -aux)/256;
 	package[3]=aux;
 	
-	srand(time(0));
 	for(i=0; i<size; i++){
-		int random=rand()%10;
-		if(random>2){
-			package[i+4]=0;
-		}
-		else package[i+4]=buffer[i]; // data read from file into application package
+		package[i+4]=buffer[i]; // data read from file into application package
 	}
 
 	return i+4; // returns size of package
