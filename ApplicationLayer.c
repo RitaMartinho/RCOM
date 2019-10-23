@@ -100,8 +100,7 @@ int main(int argc, char** argv){
   switch (mode)
   {
     case SEND:
-     if (sender(fd) < 0 )
-      return 1;
+     sender(fd);
       close(Al.fd);
 
       break;

@@ -28,7 +28,7 @@ int setPort(char *port, struct termios *oldtio){
 	struct termios newtio;
 
 	int fd;
-	if ((fd = open(port, O_RDWR | O_NOCTTY /*| O_NONBLOCK */)) < 0) {
+	if ((fd = open(port, O_RDWR | O_NOCTTY )) < 0) {
 		perror(port);
 		return -1;
 	}
@@ -233,17 +233,13 @@ int readFromPort(int fd, unsigned char* frame){
 
     while(!done){
 		res=read(fd, &tmp,1);
-		if(res==-1){
+        if(res==-1){
             perror("read() from port = -1");
             return -1;
         }
 		else if(res==0){
-			printf("read() from por =0\n");
-			return 0;
-			//TIME-OUT CASSION
-		}
-		else if(res== EAGAIN || EWOULDBLOCK){
-			done=0;
+			 printf("read() from por =0\n");
+			 //return 0;
 		}
         else if(tmp== FLAG){ // evaluate if end or start point
 
