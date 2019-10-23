@@ -317,3 +317,19 @@ int destuffing(int length, unsigned char* buffer, unsigned char* frame){
 	}
 	return frame_length;
 }
+const int PROGRESS_BAR_LENGTH = 51;
+void printProgressBar(float current, float total) {
+	float percentage = 100.0 * current / total;
+
+	printf("\rCompleted: %6.2f%% [", percentage);
+
+	int i, len = PROGRESS_BAR_LENGTH;
+	int pos = percentage * len / 100.0;
+
+	for (i = 0; i < len; i++)
+		i <= pos ? printf("=") : printf(" ");
+
+	printf("]");
+
+	fflush(stdout);
+}
