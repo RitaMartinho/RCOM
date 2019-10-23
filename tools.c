@@ -244,6 +244,9 @@ int readFromPort(int fd, unsigned char* frame){
 			done=1;
 			//TIME-OUT CASSION
 		}
+		else if(res== EAGAIN || EWOULDBLOCK){
+			done=0;
+		}
         else if(tmp== FLAG){ // evaluate if end or start point
 
             if(l==0){ //start point 
