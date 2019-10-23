@@ -25,15 +25,15 @@ int main(int argc, char** argv){
 
     int done = 0;
     char file[20];
-    /* //unsigned char test[]="ol~a";   
+    /* //unsigned char test[]="ol~a";
       //unsigned char package[SIZE_DATAPACKAGE];
       //unsigned char  package2[SIZE_DATAPACKAGE];
 
       //size= buildDataPackage(test,package,4, &seq_n);
       //printf("size of package: %d\n", size);
-    */  
-    if ( (argc < 2) || 
-  	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
+    */
+    if ( (argc < 2) ||
+  	     ((strcmp("/dev/ttyS0", argv[1])!=0) &&
   	      (strcmp("/dev/ttyS4", argv[1])!=0) )) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
@@ -50,7 +50,7 @@ int main(int argc, char** argv){
   printf("Select Connection mode\n");
   printf("1: SEND   2:RECEIVE\n");
   ConnectionMode mode;
-  int i; 
+  int i;
   scanf("%d",&i);
   mode =i-1;
 
@@ -68,13 +68,13 @@ int main(int argc, char** argv){
           else
             printf("Invalid input. Try again:\n");
 
-              
+
           (Al.file_name) = file;
           Al_setter();
-      
+
       }
       break;
-    
+
     case RECEIVE:
       printf("How do you wanna name the incoming file?\n");
 
@@ -106,7 +106,7 @@ int main(int argc, char** argv){
       close(Al.fd);
 
       break;
-  
+
     case RECEIVE:
       receiver(fd);
       //close();
@@ -156,12 +156,12 @@ int receiver(int fd){
   }
 
   while(!done){
-    
+
     switch(state){
 
       case 0: //reading start packages and full Al struct
-            
-          
+
+
             res=llread(fd,data_from_llread);
 
             if(res<0){
@@ -170,15 +170,14 @@ int receiver(int fd){
             }
 
             c_value=data_from_llread[0];
-            
+
             for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
- 
-              package[i]=data_from_llread[i+1]; 
+
+              package[i]=data_from_llread[i+1];
             }
 
             if(c_value==AP_START){
-               printf(" right c %d\n", c_value);
 
               rebuildControlPackage(package,start);
 
@@ -186,7 +185,7 @@ int receiver(int fd){
 
                 if(start[i].T==PARAM_FILE_SIZE){
                   const char *c = &start[i].V[0];
-                  Al.file_size=atoi(c); 
+                  Al.file_size=atoi(c);
                 }
 
                 if(start[i].T==PARAM_FILE_NAME){
@@ -234,7 +233,7 @@ int receiver(int fd){
 
              for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
-              package[i]=data_from_llread[i+1]; 
+              package[i]=data_from_llread[i+1];
             }
           }
 
@@ -245,14 +244,13 @@ int receiver(int fd){
           }
 
           if(c_value==AP_END){
-            
-            printf("It's and end\n");
+
             state=2;
             break;
           }
           }
 
-          
+
           res=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1);
 
           if(res<0){
@@ -262,7 +260,7 @@ int receiver(int fd){
           }
 
           memset(package, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
-      
+
           its_data=0; // so it can read more
 
           c_value=0;
@@ -272,12 +270,12 @@ int receiver(int fd){
 
           for(int i=0; i<res-1;i++){ //[i+1] so it doesnt send the C -> it's not necessary at this point and we don't count it in our functions from tools
 
-              package[i]=data_from_llread[i+1]; 
+              package[i]=data_from_llread[i+1];
           }
 
           rebuildControlPackage(package,end);
 
-          
+
           for(int i=0; i<TLV_N; i++){
 
                 if(end[i].T==PARAM_FILE_SIZE){
@@ -293,15 +291,15 @@ int receiver(int fd){
                 }
           }
           done=1;
-          break;   
+          break;
     }
   }
-  
+
   if(close(output_file)<0){
 
     perror("close():");
     return 0;
-  }  
+  }
 
   return 0;
 }

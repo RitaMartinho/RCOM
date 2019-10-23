@@ -29,7 +29,7 @@ int llopen(int fd, ConnectionMode mode){
         while(connected==0){
 
           switch(state){ // like a state machine to know if it is sending SET or waiting for UA
-            
+
             case 0: //SENDS SET
               tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending SET
 
@@ -50,13 +50,13 @@ int llopen(int fd, ConnectionMode mode){
               while(frame == NULL){
                 frame= connectionStateMachine(fd);
 
-                if(timeout){ 
+                if(timeout){
                   if(n_timeout >= MaxTries){
                     stopAlarm();
                     printf("Nothing received for 3 times\n");
                     return -1;
                   }
-                  else{ 
+                  else{
                     printf("Nothing was received after 3 seconds\n");
                     printf("Gonna try again!\n\n\n");
                     state=0; //tries to send again
@@ -64,7 +64,7 @@ int llopen(int fd, ConnectionMode mode){
                     break;
                   }
                 }
-              }                  
+              }
 
               if( frame != NULL && UA[2]==frame[2] ){
               stopAlarm(); // something has been received by this point
@@ -76,11 +76,11 @@ int llopen(int fd, ConnectionMode mode){
           }
     }
     break;
-          
+
   case RECEIVE:
     while(connected==0){
       switch(state){ // like a state machine to know if it is sending UA or waiting for SET
-        
+
         case 0: //getting SET
 
               printf("WAITING FOR SET\n");
@@ -90,7 +90,7 @@ int llopen(int fd, ConnectionMode mode){
                   state=1;
                 }
               break;
-              
+
         case 1: // sending UA
 
               tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
@@ -124,7 +124,7 @@ int llclose(int fd, ConnectionMode mode){
         while(connected==0){
 
           switch(state){ // like a state machine to know if it is sending DISC (or UA) or waiting for DISC
-            
+
             case 0: //SENDS DISC
                   tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending SET
 
@@ -141,17 +141,17 @@ int llclose(int fd, ConnectionMode mode){
               printf("WAITING FOR DISC\n");
               setAlarm(3);
               frame = NULL;
-              while (frame == NULL){                   
+              while (frame == NULL){
                 frame = connectionStateMachine(fd);
 
                 if( timeout ){
-                  n_timeout++; 
+                  n_timeout++;
                   if(n_timeout >= MaxTries){
                     stopAlarm();
                     printf("Nothing received for 3 times\n");
                     return -1;
                   }
-                  else{ 
+                  else{
                     printf("WAITING FOR DISC: Nothing was received for 3 seconds\n");
                     printf("Gonna try again!\n\n\n");
                     state=0;
@@ -161,7 +161,7 @@ int llclose(int fd, ConnectionMode mode){
                 }
               }
               stopAlarm();
-              
+
               if(frame!= NULL && DISC[2]==frame[2] ){ //GOT DISC
                   state=2;
               }
@@ -180,12 +180,12 @@ int llclose(int fd, ConnectionMode mode){
           }
         }
     break;
-          
+
   case RECEIVE:
       while(connected==0){
 
         switch(state){ // like a state machine to know if it is sending DISC
-          
+
           case 0: //getting DISC
 
             printf("WAITING FOR DISC\n");
@@ -195,7 +195,7 @@ int llclose(int fd, ConnectionMode mode){
                 state=1;
               }
             break;
-                
+
           case 1: // sending DISC back
 
             tcflush(fd,TCIOFLUSH); // clears port to making sure we are only sending UA
@@ -208,14 +208,14 @@ int llclose(int fd, ConnectionMode mode){
               state=2;
             }
             break;
-          
+
           case 2: //waiting for UA
 
             printf("WAITING FOR UA\n");
             frame= connectionStateMachine(fd);
 
               if(UA[2]==frame[2]){
-                printf("\nConnection Terminated!\n");                      
+                printf("\nConnection Terminated!\n");
                 connected=1;
               }
             break;
@@ -224,15 +224,15 @@ int llclose(int fd, ConnectionMode mode){
     break;
   }
   return 0;
-  
+
 }
 
 int llwrite(int fd, unsigned char* buffer,int length ){
-  
+
   int transfering=1, res=0, frame_size=0, done=0;
   unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
-  
+
   //BUILD RR and REJ for comparison
   if(ns==0){
     buildConnectionFrame(RR,A_S,C_RR1);
@@ -246,7 +246,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
 	frame_size= buildFrame(frame_to_send, ns, buffer, length);
 
   while (transfering)
-  { 
+  {
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
     setAlarm(3);
@@ -255,20 +255,20 @@ int llwrite(int fd, unsigned char* buffer,int length ){
       done = readFromPort(fd, frame_to_receive);
       if(timeout){
         if(n_timeout >=MaxTries){
-          stopAlarm();        
+          stopAlarm();
           printf("Nothing received for 3 times\n");
           return -1;
         }
       	else{
           printf("WAITING FOR WRITE ACKOLEGMENT: Nothing was received after 3 seconds\n");
-          printf("Gonna try again!\n\n\n"); 
+          printf("Gonna try again!\n\n\n");
           timeout=0;
           //done=0;
           break;
         }
       }
     }
-    
+
     if( memcmp(RR,frame_to_receive, 5) == 0 ){ //CHECK TO SEE IF RR
     	/*
         if(nr != ns ){
@@ -311,7 +311,6 @@ int llread(int fd, unsigned char* frame_to_AL ){
     //DISC
   */
 
-  printf("entering llread\n");
   while(!done){
 
     switch(state){
@@ -320,12 +319,11 @@ int llread(int fd, unsigned char* frame_to_AL ){
 
         res=readFromPort(fd,frame_from_port);
 
-        printf("read from port, %d\n", res);
         if(res==-1 || res== -2){
-          
+
           return -1;
         }
-  
+
         state=2;
         break;
 
@@ -343,7 +341,7 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
 
       case 2: //check BCC1
-        
+
         if((frame_from_port[1]^frame_from_port[2])!=frame_from_port[3]){ //wrong BCC1
 
           state=6;
@@ -352,12 +350,11 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
 
       case 3://DESTUFFING
-        destuffed_data_size = destuffing(res-1, frame_from_port, data_frame_destuffed); 
+        destuffed_data_size = destuffing(res-1, frame_from_port, data_frame_destuffed);
         state=4;
         break;
       case 4:  //check BCC2
 
-        printf("des data dize : %d",destuffed_data_size);
         BCC2=data_frame_destuffed[destuffed_data_size-1];
         BCC2aux=data_frame_destuffed[0];
 
@@ -365,16 +362,13 @@ int llread(int fd, unsigned char* frame_to_AL ){
           BCC2aux= BCC2aux ^ data_frame_destuffed[k];
         }
 
-        printf("BCC2 : %d\n", BCC2);
-        printf("BCC2aux: %d\n", BCC2aux);
-
         if(BCC2!=BCC2aux){
           state=6;
           break;
         }
         else state=5;
         break;
-      case 5: 
+      case 5:
 
           if(frame_from_port[2]== C_NS0 && nr==0){
 
@@ -399,25 +393,24 @@ int llread(int fd, unsigned char* frame_to_AL ){
             return -1;
           }
 
-          printf("Leaving llread\n");
           done=1;
           break;
     case 6: //REJ case
-        
+
         if(frame_from_port[2]== C_NS0 && nr==0){// frame 0, rej0
-          buildConnectionFrame(REJ, A_S,C_REJ0); 
+          buildConnectionFrame(REJ, A_S,C_REJ0);
         }
-        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1         
+        else if(frame_from_port[2]== C_NS1 && nr==1){// frame 1, rej1
             buildConnectionFrame(REJ, A_S,C_REJ1);
         }
-    
-        tcflush(fd, TCIOFLUSH);       
+
+        tcflush(fd, TCIOFLUSH);
         if( write( fd, REJ, 5)< 5){
-          
+
           perror("Write () REJ:");
           return -1;
         }
-        state=0; // trying again 
+        state=0; // trying again
         break;
     }
   }
@@ -428,7 +421,7 @@ char* connectionStateMachine(int fd){
   connectionState currentState = START_CONNECTION;
   char c;
   static char message[5];
-  int done = 0, i = 0;  
+  int done = 0, i = 0;
 
   while (!done){
 
@@ -438,7 +431,7 @@ char* connectionStateMachine(int fd){
     else if (read(fd, &c, 1)== 0){
       return NULL;
     }
-    
+
     switch(currentState){
 
       case START_CONNECTION:
@@ -511,4 +504,3 @@ char* connectionStateMachine(int fd){
   }
   return message;
 }
-
