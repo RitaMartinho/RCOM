@@ -24,7 +24,6 @@ int llopen(int fd, ConnectionMode mode){
   //Building frames
   buildConnectionFrame(SET,A_S,C_SET);
   buildConnectionFrame(UA,A_S,C_UA);
-  timeout_counter = 1;
   switch (mode){
     case SEND:
         while(connected==0){
@@ -121,7 +120,6 @@ int llclose(int fd, ConnectionMode mode){
   buildConnectionFrame(UA,A_S,C_UA);
   buildConnectionFrame(DISC, A_S, C_DISC);
 
-  timeout_counter=1;
   switch (mode){
     case SEND:
         while(connected==0){
@@ -234,7 +232,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   int transfering=1, res=0, frame_size=0, done=1;
   unsigned char frame_to_send[SIZE_FRAME], frame_to_receive[SIZE_FRAME];
   unsigned char RR[5], REJ[5];
-  //n_timeout=0;
+
   //BUILD RR and REJ for comparison
   if(ns==0){
     buildConnectionFrame(RR,A_S,C_RR1);
@@ -251,6 +249,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
   { 
     //TIMEOUT CAUSION
     res = write(fd, frame_to_send, frame_size);
+    printf("Wrote this %s \n", frame_to_send);
     setAlarm(3);
     done = readFromPort(fd, frame_to_receive);
     if(done!=0)
@@ -285,6 +284,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
       transfering=0;
     }
     if(memcmp(REJ, frame_to_receive, 5) ){ //REJ CASE
+      printf("Reject case!\n");
       continue;
     }
   }
@@ -300,19 +300,6 @@ int llread(int fd, unsigned char* frame_to_AL ){
   unsigned char RR[5], REJ[5];
   unsigned char BCC2 = 0x00;
   unsigned char BCC2aux = 0x00;
-  /*
-    //build RR and REJ
-    if(nr==1){
-
-      buildConnectionFrame(RR,A_S,C_RR1);
-      buildConnectionFrame(REJ,A_S, C_REJ1);
-    }else if(nr==0){
-
-      buildConnectionFrame(RR, A_S,C_RR0);
-      buildConnectionFrame(REJ,A_S,C_RR1);
-    }
-    //DISC
-  */
 
   printf("entering llread\n");
   while(!done){
@@ -321,9 +308,11 @@ int llread(int fd, unsigned char* frame_to_AL ){
 
       case 0://reads from port
 
-        res=readFromPort(fd,frame_from_port);
-
-        printf("read from port, %d\n", res);
+        while( (res=readFromPort(fd,frame_from_port) )== 0 ){
+          printf("NO DATA COMING IN!\n");
+        }
+        
+        printf("llread from port, %d\n", res);
         if(res==-1 || res== -2){
           
           return -1;
@@ -360,7 +349,7 @@ int llread(int fd, unsigned char* frame_to_AL ){
         break;
       case 4:  //check BCC2
 
-        printf("des data dize : %d",destuffed_data_size);
+        printf("des data dize : %d\n",destuffed_data_size);
         BCC2=data_frame_destuffed[destuffed_data_size-1];
         BCC2aux=data_frame_destuffed[0];
 

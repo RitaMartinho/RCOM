@@ -87,7 +87,7 @@ void sender(int fd){
 
                     printf("llwriten: %d\n", res);
 					if(res < 0) {
-						perror("llwrite()");
+                        printf("Connection not possible, check cable and try again.\n");
 						return;
 					} else {
 						count_bytes += res;

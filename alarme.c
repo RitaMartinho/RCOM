@@ -5,14 +5,11 @@
 #define TRUE 1
 #define FALSE 0
 
-int timeout_counter=0;
-
 int timeout;
 int n_timeout;
 void handler()                   // handler alarme
 {
-	printf("alarme # %d\n", timeout_counter);
-   timeout_counter++;
+	printf("alarme # %d\n", n_timeout);
 	timeout=TRUE;
 	n_timeout++;
 }
@@ -24,7 +21,6 @@ void stopAlarm() {
 
    sigaction(SIGALRM, &action, NULL);
    timeout=FALSE;
-   timeout_counter=0;
    n_timeout=0;
 	alarm(0);
 }
