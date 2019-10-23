@@ -36,7 +36,7 @@ void tlv_setter(ControlPackage *tlv){
     }   
 }
 
-void sender(int fd){
+int sender(int fd){
 
     int count_bytes2=0, ler=0, res=0, count_bytes=0, res1=0;
     unsigned char buffer[SIZE_DATAPACKAGE];
@@ -69,14 +69,14 @@ void sender(int fd){
 
 					if((res = read(Al.fd, buffer, ler)) < 0) {
 						perror("read()");
-						return;
+						return -1;
 					}
 
                     //printf("res: %d",res);
 
 					if((res1 = buildDataPackage(buffer, DataPackage, res, &i)) < 0) {
 						perror("buildDataPackage");
-						return;
+						return -1;
 					}
 
                     printf("data package size: %d\n", res);
@@ -87,8 +87,8 @@ void sender(int fd){
 
                     printf("llwriten: %d\n", res);
 					if(res < 0) {
-                        printf("Connection not possible, check cable and try again.\n");
-						return;
+                        printf("Connection LOST, check cable and try again.\n");
+						return -1;
 					} else {
 						count_bytes += res;
 					}
@@ -115,5 +115,5 @@ void sender(int fd){
     unsigned char End_Controlpackage[SIZE_DATAPACKAGE-4];
     buildControlPackage(AP_END, End_Controlpackage, tlv_end);
     llwrite(fd, End_Controlpackage, SIZE_DATAPACKAGE); 
-  
+    return 1;
 }

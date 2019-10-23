@@ -28,7 +28,7 @@ int setPort(char *port, struct termios *oldtio){
 	struct termios newtio;
 
 	int fd;
-	if ((fd = open(port, O_RDWR | O_NOCTTY )) < 0) {
+	if ((fd = open(port, O_RDWR | O_NOCTTY | O_NONBLOCK )) < 0) {
 		perror(port);
 		return -1;
 	}
