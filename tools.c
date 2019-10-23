@@ -239,7 +239,7 @@ int readFromPort(int fd, unsigned char* frame){
         }
 		else if(res==0){
 			printf("read() from por =0\n");
-			done=1;
+			return 0;
 			//TIME-OUT CASSION
 		}
 		else if(res== EAGAIN || EWOULDBLOCK){
