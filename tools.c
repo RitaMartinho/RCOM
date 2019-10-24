@@ -189,7 +189,7 @@ void rebuildControlPackage(unsigned char* package, ControlPackage *tlv){
 
 		tlv[z].T = package[i];
 		i++;
-		tlv[z].L=sizeof(package[i]);
+		//tlv[z].L=sizeof(package[i]);
 		tlv[z].L= package[i];
 
 		size_v=(int)(tlv[z].L);

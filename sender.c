@@ -23,9 +23,16 @@ void tlv_setter(ControlPackage *tlv){
     snprintf(fileSizeBuf, sizeof fileSizeBuf, "%d", Al.file_size);
 
     tlv[0].T=PARAM_FILE_SIZE;
-    tlv[0].L=sizeof(Al.file_size); 
+    int i=(Al.file_size), count=0;
+    while(i != NULL){
+        i/=10;
+        count++;
+    }
+    snprintf(&(tlv[0].L), count, "%d", count);
+  
+   // tlv[0].L=sizeof(Al.file_size); 
     tlv[0].V = (unsigned char *) malloc(sizeof(fileSizeBuf));
-    for(int i=0;i < sizeof(fileSizeBuf); i++){
+    for(int i=0;i < count; i++){
         tlv[0].V[i]=fileSizeBuf[i];
     }
     tlv[1].T=PARAM_FILE_NAME;

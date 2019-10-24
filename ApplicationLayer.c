@@ -21,9 +21,8 @@ int main(int argc, char** argv){
 
     int fd=0, res=0;
     struct termios oldtio;
-
-    int done = 0;
-    char file[20];
+    int done = 0, res_scan=0;
+    char file[90];
     if ( (argc < 2) ||
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) &&
   	      (strcmp("/dev/ttyS4", argv[1])!=0) )) {
@@ -225,13 +224,13 @@ int receiver(int fd){
         if(c_value==AP_START){
 
           rebuildControlPackage(package,start);
-            if(start[0].T==PARAM_FILE_SIZE){
-              const char *c = &start[0].V[0];
-              Al.file_size=atoi(c);
-            }
+
           for(int i=0; i<TLV_N; i++){
 
-
+            if(start[i].T==PARAM_FILE_SIZE){
+              //const char *c = &start[i].V[0];
+              Al.file_size=atoi(&start[i].V[0]);
+            }
             if(start[i].T==PARAM_FILE_NAME){
               name_size=(int)start[i].L;
               //Al.file_name=(char*)malloc(name_size);
