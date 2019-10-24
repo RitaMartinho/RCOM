@@ -127,11 +127,11 @@ unsigned char buildBCC2(unsigned char *message, int lenght){ //belongs to datali
 }
 
 //builds data package from file
-int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int* seq_n){
+int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int seq_n){
 
 	int i=0, aux=0;
 	package[0]= AP_DATA; //C
-	package[1]=(char)(*seq_n)++;
+	package[1]=(char)(seq_n);
 
 	aux=size%256;
 	package[2]=(size -aux)/256;
@@ -312,18 +312,21 @@ int destuffing(int length, unsigned char* buffer, unsigned char* frame){
 	}
 	return frame_length;
 }
-const int PROGRESS_BAR_LENGTH = 51;
+
 void printProgressBar(float current, float total) {
+	int bar_length = 51;
 	float percentage = 100.0 * current / total;
 
 	printf("\rCompleted: %6.2f%% [", percentage);
 
-	int i, len = PROGRESS_BAR_LENGTH;
-	int pos = percentage * len / 100.0;
+	int i;
+	int pos = percentage * bar_length / 100.0;
 
-	for (i = 0; i < len; i++)
-		i <= pos ? printf("=") : printf(" ");
-
+	for (i = 0; i < bar_length; i++){
+		if(i <= pos) 
+			printf("=");
+		else printf(" ");
+	}
 	printf("]");
 
 	fflush(stdout);

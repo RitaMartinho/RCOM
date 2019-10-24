@@ -69,7 +69,7 @@ void buildConnectionFrame( unsigned char *connectionFrame, unsigned char A, unsi
 int buildFrame( unsigned char * frame, int C_ns, unsigned char* message, int lenght);
 unsigned char buildBCC2(unsigned char *message, int lenght);
 
-int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int* seq_n);
+int buildDataPackage(unsigned char* buffer, unsigned char* package, int size, int seq_n);
 void rebuildDataPackage(unsigned char* packet, DataPackage *packet_data);
 
 int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage *tlv);
