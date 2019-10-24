@@ -116,6 +116,7 @@ int main(int argc, char** argv){
 int receiver(int fd){
 
   int res=0, done=0, state=0, name_size=0, output_file=0, its_data=0, c_value=0;
+  int bytes_written=0, total_bytes_written=0;
   unsigned char data_from_llread[SIZE_DATAPACKAGE];
   unsigned char package[SIZE_DATAPACKAGE-1];
   ControlPackage start[TLV_N], end[TLV_N];
@@ -224,12 +225,12 @@ int receiver(int fd){
         if(c_value==AP_START){
 
           rebuildControlPackage(package,start);
-          for(int i=0; i<TLV_N; i++){
-
-            if(start[i].T==PARAM_FILE_SIZE){
-              const char *c = &start[i].V[0];
+            if(start[0].T==PARAM_FILE_SIZE){
+              const char *c = &start[0].V[0];
               Al.file_size=atoi(c);
             }
+          for(int i=0; i<TLV_N; i++){
+
 
             if(start[i].T==PARAM_FILE_NAME){
               name_size=(int)start[i].L;
@@ -237,6 +238,7 @@ int receiver(int fd){
               //strcpy(Al.file_name, (char*)start[i].V);
             }
           }
+          printf("TOTAL FILE SIZE: %d\n", Al.file_size);
         }
 
         else if(c_value==AP_DATA){
@@ -253,7 +255,7 @@ int receiver(int fd){
         output_file=open(Alr.file_name, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH);
         c_value=0;
         break;
-  case 1:
+      case 1:
 
       if(its_data==0){ // we do this if so it wont read again if we know already from case 1 that it is data
 
@@ -286,12 +288,13 @@ int receiver(int fd){
         }
       }
 
-      res=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1);
-
-      if(res<0){
+      bytes_written=write(output_file, data.file_data, 256*(int)data.L2+(int)data.L1);
+      if(bytes_written<0){
         perror("write() to output file:");
         return -1;
       }
+      total_bytes_written+=bytes_written;
+      printProgressBar(total_bytes_written, Al.file_size);
 
       memset(package, 0, SIZE_DATAPACKAGE); //because we are reusing it to read various (depends on the file) data_from_llread
       its_data=0; // so it can read more

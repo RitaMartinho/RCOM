@@ -25,7 +25,7 @@ void tlv_setter(ControlPackage *tlv){
     tlv[0].T=PARAM_FILE_SIZE;
     tlv[0].L=sizeof(Al.file_size); 
     tlv[0].V = (unsigned char *) malloc(sizeof(fileSizeBuf));
-    for(int i=0;i < strlen(fileSizeBuf); i++){
+    for(int i=0;i < sizeof(fileSizeBuf); i++){
         tlv[0].V[i]=fileSizeBuf[i];
     }
     tlv[1].T=PARAM_FILE_NAME;
@@ -73,16 +73,17 @@ int sender(int fd){
             return -1;
         }
 
-        printf("data package size: %d\n", data_size);
+        //printf("data package size: %d\n", data_size);
         byteswritten = llwrite(fd, DataPackage,data_size);
 
-        printf("llwriten: %d\n", byteswritten);
+   //     printf("llwriten: %d\n", byteswritten);
         if(byteswritten < 0) {
             printf("Connection LOST, check cable and try again\n");
             return -1;
         } 
 
         memset(fileBuf, 0, SIZE_DATAPACKAGE);
+        printProgressBar(total_bytesread, Al.file_size);
     }
 
     ControlPackage tlv_end[2];

@@ -81,5 +81,5 @@ int readFromPort(int fd, unsigned char* frame);
 
 int stuffing (int length, unsigned char* buffer, unsigned char* frame, int frame_length, unsigned char BCC2);
 int destuffing (int length, unsigned char* buffer, unsigned char* frame);
-
+void printProgressBar(float current, float total);
 #endif
