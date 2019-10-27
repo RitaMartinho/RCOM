@@ -132,13 +132,13 @@ int llclose(int fd, ConnectionMode mode){
                     perror("write():");
                     return -1;
                   }
-                  else printf("DISC SENT\n");
+                  else printf("\nDISC SENT\n");
 
                   state =1;
                   break;
             case 1: // GETTING DISC
 
-              printf("WAITING FOR DISC\n");
+              printf("\nWAITING FOR DISC\n");
               setAlarm(3);
               frame = NULL;
               while (frame == NULL){
@@ -152,7 +152,7 @@ int llclose(int fd, ConnectionMode mode){
                     return -1;
                   }
                   else{
-                    printf("WAITING FOR DISC: Nothing was received for 3 seconds\n");
+                    printf("\nWAITING FOR DISC: Nothing was received for 3 seconds\n");
                     printf("Gonna try again!\n\n\n");
                     state=0;
                     timeout=0;
@@ -188,7 +188,7 @@ int llclose(int fd, ConnectionMode mode){
 
           case 0: //getting DISC
 
-            printf("WAITING FOR DISC\n");
+            printf("\nWAITING FOR DISC\n");
             frame= connectionStateMachine(fd);
 
               if(frame!=NULL && DISC[2]==frame[2]){
@@ -270,18 +270,12 @@ int llwrite(int fd, unsigned char* buffer,int length ){
     }
 
     if( memcmp(RR,frame_to_receive, 5) == 0 ){ //CHECK TO SEE IF RR
-    	/*
-        if(nr != ns ){
-          ns=nr;
-          transfering=0;
-        }
-        else continue; //Ns and nr equal, send again
-      */
+    	
       stopAlarm(); //something has been received by this point
       ns = 1 -ns;
       transfering=0;
     }
-    if(memcmp(REJ, frame_to_receive, 5) ){ //REJ CASE
+    if(memcmp(REJ, frame_to_receive, 5)==0 ){ //REJ CASE
       continue;
     }
   }
@@ -297,19 +291,7 @@ int llread(int fd, unsigned char* frame_to_AL ){
   unsigned char RR[5], REJ[5];
   unsigned char BCC2 = 0x00;
   unsigned char BCC2aux = 0x00;
-  /*
-    //build RR and REJ
-    if(nr==1){
-
-      buildConnectionFrame(RR,A_S,C_RR1);
-      buildConnectionFrame(REJ,A_S, C_REJ1);
-    }else if(nr==0){
-
-      buildConnectionFrame(RR, A_S,C_RR0);
-      buildConnectionFrame(REJ,A_S,C_RR1);
-    }
-    //DISC
-  */
+  
 
   while(!done){
 
@@ -415,92 +397,4 @@ int llread(int fd, unsigned char* frame_to_AL ){
     }
   }
   return res-6;
-}
-char* connectionStateMachine(int fd){
-
-  connectionState currentState = START_CONNECTION;
-  char c;
-  static char message[5];
-  int done = 0, i = 0;
-
-  while (!done){
-
-    if (currentState == STOP_CON){
-      done = 1;
-    }
-    else if (read(fd, &c, 1)== 0){
-      return NULL;
-    }
-
-    switch(currentState){
-
-      case START_CONNECTION:
-
-        if(c == FLAG){
-          message[i++] = c;
-          currentState = FLAG_RCV;
-        }
-        break;
-
-      case FLAG_RCV:
-        if (c == A_R || c == A_S){
-          message[i++] = c;
-          currentState = A_RCV;
-        }
-        else if(c!=FLAG){
-          i = 0;
-          currentState = START_CONNECTION;
-        }
-        break;
-
-      case A_RCV:
-
-        if (c == C_SET || c== C_UA || c==C_DISC){
-          message[i++] = c;
-          currentState = C_RCV;
-        }
-        else if(c == FLAG){
-          i = 1;
-          currentState = FLAG;
-        }
-        else{
-          i = 0;
-          currentState = START_CONNECTION;
-        }
-        break;
-      case C_RCV:
-
-        if (c == (A_S^C_SET) || c== (A_S^C_UA) || c==(A_S^C_DISC) || c== (A_R^C_SET) || c== (A_R^C_UA) || c==(A_R^C_DISC)) {
-          message[i++] = c;
-          currentState = BCC_OK;
-        }
-        else if(c == FLAG){
-          i = 1;
-          currentState = FLAG_RCV;
-        }
-        else{
-          i = 0;
-          currentState = START_CONNECTION;
-        }
-        break;
-      case BCC_OK:
-
-        if (c == FLAG){
-          message[i++] = c;
-          currentState = STOP_CON;
-        }
-        else {
-          i = 0;
-          currentState = START_CONNECTION;
-        }
-        break;
-
-      case STOP_CON: {
-        message[i] = 0;
-        done = 1;
-        break;
-      }
-    }
-  }
-  return message;
 }

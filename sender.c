@@ -11,11 +11,16 @@
 
 
 //sets Al struct with paramenters
-void Al_setter(){
+int Al_setter(){
     int file_fd = open(Al.file_name, O_RDONLY);
+    if(file_fd < 0){
+        perror("open():");
+        return -1;
+    }
     Al.fd=file_fd;
     (Al.file_size)=fileLenght(Al.fd);
     printf("FILE LENGTH : %d  \n\n", Al.file_size);
+    return 0;
 }
 void tlv_setter(ControlPackage *tlv){
     //convert file_size to oct
@@ -80,10 +85,8 @@ int sender(int fd){
             return -1;
         }
 
-        //printf("data package size: %d\n", data_size);
         byteswritten = llwrite(fd, DataPackage,data_size);
 
-   //     printf("llwriten: %d\n", byteswritten);
         if(byteswritten < 0) {
             printf("Connection LOST, check cable and try again\n");
             return -1;

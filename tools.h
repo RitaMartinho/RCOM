@@ -76,6 +76,8 @@ int buildControlPackage(unsigned char C, unsigned char* package, ControlPackage 
 void rebuildControlPackage(unsigned char* package, ControlPackage *tlv);
 
 int fileLenght(int fd);
+char* connectionStateMachine(int fd);
+
 int readFromPort(int fd, unsigned char* frame);
 
 

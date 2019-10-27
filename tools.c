@@ -222,6 +222,96 @@ int fileLenght(int fd){
 	return lenght;
 }
 
+char* connectionStateMachine(int fd){
+
+  connectionState currentState = START_CONNECTION;
+  char c;
+  static char message[5];
+  int done = 0, i = 0;
+
+  while (!done){
+
+    if (currentState == STOP_CON){
+      done = 1;
+    }
+    else if (read(fd, &c, 1)== 0){
+      return NULL;
+    }
+
+    switch(currentState){
+
+      case START_CONNECTION:
+
+        if(c == FLAG){
+          message[i++] = c;
+          currentState = FLAG_RCV;
+        }
+        break;
+
+      case FLAG_RCV:
+        if (c == A_R || c == A_S){
+          message[i++] = c;
+          currentState = A_RCV;
+        }
+        else if(c!=FLAG){
+          i = 0;
+          currentState = START_CONNECTION;
+        }
+        break;
+
+      case A_RCV:
+
+        if (c == C_SET || c== C_UA || c==C_DISC){
+          message[i++] = c;
+          currentState = C_RCV;
+        }
+        else if(c == FLAG){
+          i = 1;
+          currentState = FLAG;
+        }
+        else{
+          i = 0;
+          currentState = START_CONNECTION;
+        }
+        break;
+      case C_RCV:
+
+        if (c == (A_S^C_SET) || c== (A_S^C_UA) || c==(A_S^C_DISC) || c== (A_R^C_SET) || c== (A_R^C_UA) || c==(A_R^C_DISC)) {
+          message[i++] = c;
+          currentState = BCC_OK;
+        }
+        else if(c == FLAG){
+          i = 1;
+          currentState = FLAG_RCV;
+        }
+        else{
+          i = 0;
+          currentState = START_CONNECTION;
+        }
+        break;
+      case BCC_OK:
+
+        if (c == FLAG){
+          message[i++] = c;
+          currentState = STOP_CON;
+        }
+        else {
+          i = 0;
+          currentState = START_CONNECTION;
+        }
+        break;
+
+      case STOP_CON: {
+        message[i] = 0;
+        done = 1;
+        break;
+      }
+    }
+  }
+  return message;
+}
+
+
 //returns lenght of frame read from port, -1 in error 
 int readFromPort(int fd, unsigned char* frame){
 
