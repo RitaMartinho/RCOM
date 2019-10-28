@@ -284,7 +284,7 @@ int llwrite(int fd, unsigned char* buffer,int length ){
 
 int llread(int fd, unsigned char* frame_to_AL ){
 
-  int done=0, state=0, res=0, i=0, j=0;
+  int done=0, state=0, res=0, i=0, j=0, discard=0;
   int destuffed_data_size = 0;
   unsigned char frame_from_port[SIZE_FRAME];
   unsigned char data_frame_destuffed[SIZE_FRAME];
@@ -313,11 +313,17 @@ int llread(int fd, unsigned char* frame_to_AL ){
 
         if(frame_from_port[2]== C_NS0 && (nr==1)){
 
-
+          discard =1;
+          nr=0;
+          state=5;
+          
         }
         else if(frame_from_port[2] == C_NS1 && (nr==0)){
 
-
+          discard =1;
+          nr=1;
+          state=5;
+          
         }
 
         break;
@@ -362,11 +368,13 @@ int llread(int fd, unsigned char* frame_to_AL ){
             nr=0;// update nr
             buildConnectionFrame(RR, A_S,C_RR0);
           }
-          //stuff well read, then send it to AppLayer
-          for (i = 0, j = 0; i < destuffed_data_size-1; i++, j++) {
-            frame_to_AL[j] = data_frame_destuffed[i];
-        }
+          if(discard==0){
 
+            //stuff well read, then send it to AppLayer
+            for (i = 0, j = 0; i < destuffed_data_size-1; i++, j++) {
+              frame_to_AL[j] = data_frame_destuffed[i];
+            }
+          }
           //sends RR
           tcflush(fd,TCIOFLUSH);
 
