@@ -58,11 +58,7 @@ int main(int argc, char** argv){
             printf("Invalid input. Try again:\n");
 
           (Al.file_name) = file;
-          if(Al_setter()<0){
-
-            printf("error setting Al\n");
-            return -1;
-          }
+         
       }
       break;
 

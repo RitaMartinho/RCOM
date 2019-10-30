@@ -50,6 +50,12 @@ void tlv_setter(ControlPackage *tlv){
 
 int sender(int fd){
 
+     if(Al_setter()<0){
+
+            printf("error setting Al\n");
+            return -1;
+          }
+
     //convert file_size to oct
     char fileSizeBuf[10];
     snprintf(fileSizeBuf, sizeof fileSizeBuf, "%d", Al.file_size);
